@@ -8,7 +8,12 @@ edition = "2021"
 name = "winit_platform"
 doctest = false
 
+[build]
+rustflags = ["--cfg=web_sys_unstable_apis"]
+
+
 [features]
+wake_lock = ["dep:nosleep", "web-sys/Navigator", "web-sys/WakeLock", "web-sys/WakeLockType", "web-sys/WakeLockSentinel"]
 iced = ["dep:iced_winit"]
 
 [dependencies]
@@ -19,6 +24,7 @@ log = "0"
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 pollster = "0.2"
 simple_logger = "2"
+nosleep = { version = "0.2", optional = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 wasm-bindgen = "0.2"

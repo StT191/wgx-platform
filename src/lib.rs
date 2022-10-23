@@ -17,3 +17,14 @@ pub use refs::Static;
 
 mod entry_point;
 pub use entry_point::main;
+
+
+#[cfg(feature = "wake_lock")]
+mod wake_lock;
+
+#[cfg(feature = "wake_lock")]
+pub use wake_lock::*;
+
+
+// error helper
+pub mod error;
