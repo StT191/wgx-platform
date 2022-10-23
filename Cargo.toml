@@ -8,18 +8,21 @@ edition = "2021"
 name = "winit_platform"
 doctest = false
 
-[build]
-rustflags = ["--cfg=web_sys_unstable_apis"]
-
 
 [features]
 wake_lock = ["dep:nosleep", "web-sys/Navigator", "web-sys/WakeLock", "web-sys/WakeLockType", "web-sys/WakeLockSentinel"]
 iced = ["dep:iced_winit"]
+icon_loader = ["dep:icon-loader", "dep:resvg"]
+
 
 [dependencies]
 winit = "0.27"
 iced_winit = { git = "https://github.com/iced-rs/iced/", rev = "77c8380", optional = true }
 log = "0"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+icon-loader = { version = "0.3", optional = true }
+resvg = { version = "0.24", optional = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 pollster = "0.2"
