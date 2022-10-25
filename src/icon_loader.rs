@@ -82,6 +82,6 @@ pub fn load_image_with_resize(path: impl AsRef<Path>, map_size: impl FnOnce((u32
     },
 
     Some(ext) => Err(format!("file type '{ext}' is not supported")),
-    None => Err(format!("file type unknown is not supported")),
+    None => Err("file type unknown is not supported".to_string()),
   }
 }
