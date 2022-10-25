@@ -1,10 +1,17 @@
 
-// winit
+// winit / iced
 #[cfg(feature = "iced")]
 pub use iced_winit::winit;
 
+#[cfg(feature = "iced")]
+mod iced_clipboard;
+#[cfg(feature = "iced")]
+pub use iced_clipboard::*;
+
+
 #[cfg(not(feature = "iced"))]
 pub use winit;
+
 
 // log
 pub use log;

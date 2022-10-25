@@ -11,14 +11,15 @@ doctest = false
 
 [features]
 wake_lock = ["dep:nosleep", "web-sys/Navigator", "web-sys/WakeLock", "web-sys/WakeLockType", "web-sys/WakeLockSentinel"]
-iced = ["dep:iced_winit"]
+iced = ["dep:iced_native", "dep:iced_winit", "web-sys/Navigator", "web-sys/Clipboard"]
 icon_loader = ["dep:icon-loader", "dep:resvg"]
 
 
 [dependencies]
 winit = "0.27"
-iced_winit = { git = "https://github.com/iced-rs/iced/", rev = "77c8380", optional = true }
 log = "0"
+iced_native = { git = "https://github.com/iced-rs/iced/", rev = "77c8380", optional = true }
+iced_winit = { git = "https://github.com/iced-rs/iced/", rev = "77c8380", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 icon-loader = { version = "0.3", optional = true }
