@@ -20,7 +20,7 @@ pub use log::Level as LogLevel;
 
 // mods
 mod entry_point;
-pub use entry_point::main;
+pub use entry_point::*;
 
 
 #[cfg(feature = "wake_lock")]

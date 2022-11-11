@@ -1,18 +1,29 @@
 [package]
-name = "winit-platform"
+name = "platform"
 version = "0.1.0"
 authors = ["Stefan Tammer <st.tammer@gmail.com>"]
 edition = "2021"
 
 [lib]
-name = "winit_platform"
+name = "platform"
 doctest = false
+
+[workspace]
+members = ["run-wasm"]
 
 
 [features]
 wake_lock = ["dep:nosleep", "web-sys/Navigator", "web-sys/WakeLock", "web-sys/WakeLockType", "web-sys/WakeLockSentinel"]
 iced = ["dep:iced_native", "dep:iced_winit", "web-sys/Navigator", "web-sys/Clipboard", "web-sys/ClipboardEvent", "web-sys/DataTransfer"]
 icon_loader = ["dep:icon-loader", "dep:resvg"]
+
+
+[patch.crates-io]
+# patch iced wasm builds
+iced_native = { git = "https://github.com/bungoboingo/iced", rev = "365f37a" }
+iced_winit = { git = "https://github.com/bungoboingo/iced", rev = "365f37a" }
+iced_wgpu = { git = "https://github.com/bungoboingo/iced", rev = "365f37a" }
+iced_graphics = { git = "https://github.com/bungoboingo/iced", rev = "365f37a" }
 
 
 [dependencies]
@@ -37,3 +48,12 @@ web-sys = { version = "0.3" }
 js-sys = { version = "0.3" }
 console_error_panic_hook = "0.1"
 console_log = "0"
+
+
+# dev-dependecies
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+wgx = { path = "../wgx", features = ["timer", "iced"] }
+iced_graphics = { version = "*", features = ["canvas"] }
+
+[target.'cfg(target_family = "wasm")'.dev-dependencies]
+wgx = { path = "../wgx", features = ["timer", "iced", "webgl"] }

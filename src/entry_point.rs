@@ -1,10 +1,18 @@
 
 use std::future::Future;
-use crate::winit::{event_loop::EventLoop, window::Window as WinitWindow};
+use crate::winit::{event_loop::{EventLoop as WinitEventLoop, EventLoopBuilder}, event::Event as WinitEvent, window::Window as WinitWindow};
 use crate::LogLevel;
 
+#[derive(Debug)]
+pub enum EventExt {
+    #[cfg(target_family="wasm")] ClipboardFilled,
+}
 
-pub fn main<F: Future<Output=()> + 'static>(run: impl FnOnce(&'static WinitWindow, EventLoop<()>) -> F, level: LogLevel) {
+pub type EventLoop = WinitEventLoop<EventExt>;
+pub type Event<'a> = WinitEvent<'a, EventExt>;
+
+
+pub fn main<F: Future<Output=()> + 'static>(run: impl FnOnce(&'static WinitWindow, EventLoop) -> F, level: LogLevel) {
 
     // init + logger
 
@@ -19,7 +27,7 @@ pub fn main<F: Future<Output=()> + 'static>(run: impl FnOnce(&'static WinitWindo
 
 
     // setup event_loop and window
-    let event_loop = EventLoop::new();
+    let event_loop = EventLoopBuilder::with_user_event().build();
 
     // further init and run
 
