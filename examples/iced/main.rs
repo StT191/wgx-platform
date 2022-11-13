@@ -1,9 +1,8 @@
 
 use platform::winit::{dpi::{PhysicalSize}, event_loop::ControlFlow, window::Window, event::*};
-use platform::{self, *, Event, iced::{Clipboard, Gui, renderer}};
+use platform::{self, *, Event, iced::{*}};
 use wgx::{*};
 use iced_wgpu::Settings;
-
 
 const LOG_LEVEL: LogLevel = LogLevel::Warn;
 
@@ -39,6 +38,7 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
     let mut gui = Gui::new(renderer, ui::Ui::new(), (width, height), &window, clipboard);
 
+    gui.theme = ui::theme();
 
     let mut frame_timer = timer::StepInterval::from_secs(1.0 / 60.0);
     // let mut frame_counter = timer::IntervalCounter::from_secs(5.0);
@@ -105,7 +105,7 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
                 target.with_encoder_frame(&gx, |mut encoder, frame| {
 
-                    encoder.render_pass(frame.attachments(Some(gui.program().color), None));
+                    encoder.render_pass(frame.attachments(Some(gui.program().bg_color), None));
 
                     gui.draw(&gx, &mut encoder, frame);
 
