@@ -1,14 +1,17 @@
 
 use std::future::Future;
-use crate::winit::{event_loop::{EventLoop as WinitEventLoop, EventLoopBuilder}, event::Event as WinitEvent, window::Window as WinitWindow};
+use crate::winit::event_loop::{EventLoop as WinitEventLoop, EventLoopBuilder, EventLoopProxy as WinitEventLoopProxy};
+use crate::winit::{event::Event as WinitEvent, window::Window as WinitWindow};
 use crate::LogLevel;
 
 #[derive(Debug)]
 pub enum EventExt {
-    #[cfg(target_family="wasm")] ClipboardFilled,
+    #[cfg(target_family="wasm")] ClipboardPaste,
+    #[cfg(target_family="wasm")] ClipboardFetch,
 }
 
 pub type EventLoop = WinitEventLoop<EventExt>;
+pub type EventLoopProxy = WinitEventLoopProxy<EventExt>;
 pub type Event<'a> = WinitEvent<'a, EventExt>;
 
 

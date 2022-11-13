@@ -11,6 +11,7 @@ pub struct WakeLock {
 }
 
 impl WakeLock {
+
     pub fn new() -> Res<Self> {
         let window = web_sys::window().ok_or("couldn't get web_sys::Window")?;
 

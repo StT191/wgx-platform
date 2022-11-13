@@ -1,25 +1,27 @@
 
+// iced and winit dependencies
 use iced_wgpu::{Viewport, Renderer, Antialiasing, Settings, Backend};
-use iced_winit::{
-    winit::{
-        dpi::PhysicalPosition, window::Window,
-        event::{WindowEvent, ModifiersState as Modifiers},
-    },
-    mouse::Interaction, conversion, Clipboard as NativeClipboard,
-};
+
+use iced_winit::winit::{dpi::PhysicalPosition, window::Window, event::{WindowEvent, ModifiersState}};
+use iced_winit::{mouse::Interaction, conversion};
+
 #[cfg(target_family = "wasm")]
-use iced_winit::winit::event::{KeyboardInput};
+use iced_winit::winit::event::{KeyboardInput, ElementState, VirtualKeyCode};
 
-use iced_native::{
-    renderer::{Style}, program::{Program, State}, application::StyleSheet,
-    Command, Debug, Size, clipboard::Clipboard as ClipboardTrait
-};
+use iced_native::{renderer::{Style}, program::{Program, State}, application::StyleSheet, Command, Debug, Size};
 
+#[cfg(target_family = "wasm")]
+use iced_native::{Event, keyboard};
+
+// wgpu/wgx and local dependencies
 use wgx::wgpu::{CommandEncoder, util::StagingBelt, TextureFormat};
 use wgx::{WgxDevice, RenderAttachable};
+use super::Clipboard;
 
 
-pub fn renderer<T>(gx: &impl WgxDevice, mut settings:Settings, format:TextureFormat, msaa: Option<u32>) -> Renderer<T> {
+// iced renderer constructor
+
+pub fn renderer<T>(gx:&impl WgxDevice, mut settings:Settings, format:TextureFormat, msaa:Option<u32>) -> Renderer<T> {
     if let Some(msaa) = msaa {
         settings.antialiasing = match msaa {
             2 => Some(Antialiasing::MSAAx2),
@@ -33,43 +35,32 @@ pub fn renderer<T>(gx: &impl WgxDevice, mut settings:Settings, format:TextureFor
 }
 
 
-pub struct Iced<T, P, C> where
+// Gui
+
+pub struct Gui<T, P> where
     T: StyleSheet,
     P:'static + Program<Renderer=Renderer<T>>,
-    C: ClipboardTrait,
 {
     renderer: Renderer<T>,
     state: State<P>,
     viewport: Viewport,
     cursor: PhysicalPosition<f64>,
     interaction: Interaction,
-    modifiers: Modifiers,
+    modifiers: ModifiersState,
     pub theme: T,
     pub style: Style,
-    clipboard: C,
+    clipboard: Clipboard,
     staging_belt: StagingBelt,
     debug: Debug,
 }
 
 
-impl<T, P> Iced<T, P, NativeClipboard> where
+impl<T, P> Gui<T, P> where
     T: StyleSheet + Default,
     P:'static + Program<Renderer=Renderer<T>>,
 {
-    pub fn new_native(renderer:Renderer<T>, program:P, size:(u32, u32), window:&Window) -> Self {
-        let clipboard = NativeClipboard::connect(window);
-        Self::new_with_clipboad(renderer, program, size, window, clipboard)
-    }
-}
 
-
-impl<T, P, C> Iced<T, P, C> where
-    T: StyleSheet + Default,
-    P:'static + Program<Renderer=Renderer<T>>,
-    C: ClipboardTrait,
-{
-
-    pub fn new_with_clipboad(mut renderer:Renderer<T>, program:P, (width, height):(u32, u32), window:&Window, clipboard: C) -> Self {
+    pub fn new(mut renderer:Renderer<T>, program:P, (width, height):(u32, u32), window:&Window, clipboard:Clipboard) -> Self {
 
         let mut debug = Debug::new();
 
@@ -77,16 +68,13 @@ impl<T, P, C> Iced<T, P, C> where
 
         let cursor = PhysicalPosition::new(-1.0, -1.0);
 
-        let state = State::new(
-            program, viewport.logical_size(),
-            &mut renderer, &mut debug,
-        );
+        let state = State::new(program, viewport.logical_size(), &mut renderer, &mut debug);
 
         let interaction = state.mouse_interaction();
 
         Self {
             renderer, state, viewport, cursor, interaction,
-            modifiers: Modifiers::default(),
+            modifiers: ModifiersState::default(),
             theme: T::default(),
             style: Style::default(),
             clipboard,
@@ -95,19 +83,15 @@ impl<T, P, C> Iced<T, P, C> where
         }
     }
 
-    pub fn program(&mut self) -> &P {
-        self.state.program()
-    }
-
-    pub fn clipboard(&mut self) -> &mut C {
-        &mut self.clipboard
-    }
 
     pub fn event(&mut self, event:&WindowEvent) {
 
         // on wasm we need to track if modifiers changed manually and fire the modifiers changed event manually
         #[cfg(target_family = "wasm")]
         let mut modifiers_changed = false;
+
+        #[cfg(target_family = "wasm")]
+        let mut paste = false;
 
         match event {
             WindowEvent::CursorMoved { position, .. } => {
@@ -121,10 +105,13 @@ impl<T, P, C> Iced<T, P, C> where
             // collect modifiers manually on web platform
             #[cfg(target_family = "wasm")]
             #[allow(deprecated)]
-            WindowEvent::KeyboardInput { input: KeyboardInput { modifiers, .. }, ..} => {
+            WindowEvent::KeyboardInput { input: KeyboardInput { modifiers, state, virtual_keycode, .. }, ..} => {
                 if &self.modifiers != modifiers {
                     self.modifiers = *modifiers;
                     modifiers_changed = true;
+                }
+                if let (true, Some(VirtualKeyCode::V), ElementState::Pressed) = (modifiers.ctrl(), virtual_keycode, state) {
+                    paste = true;
                 }
             }
 
@@ -142,7 +129,7 @@ impl<T, P, C> Iced<T, P, C> where
                 );
             }
 
-            _ => (),
+            _ => {}
         }
 
         #[cfg(target_family = "wasm")]
@@ -154,6 +141,11 @@ impl<T, P, C> Iced<T, P, C> where
             }
         }
 
+        #[cfg(target_family = "wasm")]
+        if paste && self.clipboard.is_connected() {
+            return // handle events with paste_from_clipboard method
+        }
+
         if let Some(event) = iced_winit::conversion::window_event(
             event, self.viewport.scale_factor(), self.modifiers,
         ) {
@@ -162,12 +154,30 @@ impl<T, P, C> Iced<T, P, C> where
     }
 
 
+    #[cfg(target_family = "wasm")]
+    pub fn paste_from_clipboard(&mut self) {
+        self.state.queue_event(Event::Keyboard(keyboard::Event::KeyPressed {
+            key_code: keyboard::KeyCode::V,
+            modifiers: keyboard::Modifiers::CTRL,
+        }));
+    }
+
+
+    pub fn program(&mut self) -> &P {
+        self.state.program()
+    }
+
+    pub fn clipboard(&mut self) -> &mut Clipboard {
+        &mut self.clipboard
+    }
+
+
     pub fn message(&mut self, message:P::Message) {
         self.state.queue_message(message)
     }
 
 
-    pub fn update_cursor(&mut self, window: &Window) {
+    pub fn update_cursor(&mut self, window:&Window) {
         let interaction = self.state.mouse_interaction();
         if self.interaction != interaction {
             window.set_cursor_icon(conversion::mouse_interaction(interaction));
@@ -198,7 +208,7 @@ impl<T, P, C> Iced<T, P, C> where
     }
 
 
-    pub fn draw(&mut self, gx:&impl WgxDevice, encoder:&mut CommandEncoder, target: &impl RenderAttachable) {
+    pub fn draw(&mut self, gx:&impl WgxDevice, encoder:&mut CommandEncoder, target:&impl RenderAttachable) {
 
         // borrow before the closure
         let (staging_belt, viewport, debug) = (&mut self.staging_belt, &self.viewport, &self.debug);

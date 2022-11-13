@@ -8,7 +8,7 @@ pub use iced_winit::Clipboard;
 mod web_clipboard {
 
     use std::{rc::Rc, cell::RefCell};
-    use crate::{winit::{window::Window}};
+    use crate::{EventExt, EventLoop, EventLoopProxy};
     use web_sys::{Clipboard as WebClipboard, ClipboardEvent};
     use js_sys::Function;
     use wasm_bindgen_futures::JsFuture;
@@ -39,16 +39,31 @@ mod web_clipboard {
 
     impl PasteListener {
 
-        fn new(clipboard_content: Rc<RefCell<Option<String>>>) -> Self {
+        fn new(clipboard_content: Rc<RefCell<Option<String>>>, event_proxy: Option<EventLoopProxy>) -> Self {
 
-            let closure: Box<dyn Fn(ClipboardEvent)> = Box::new(move |evt| {
-                if let Some(transfer) = evt.clipboard_data() {
-                    clipboard_content.replace(
-                        transfer.get_data("text")
-                        .map_err(|err| log::error!("{:?}", err)).ok()
-                    );
-                }
-            });
+            let closure: Box<dyn Fn(ClipboardEvent)> = if let Some(event_proxy) = event_proxy {
+                Box::new(move |evt| {
+                    if let Some(transfer) = evt.clipboard_data() {
+                        clipboard_content.replace(
+                            transfer.get_data("text")
+                            .map_err(|err| log::error!("{:?}", err)).ok()
+                        );
+                    }
+                    if let Err(err) = event_proxy.send_event(EventExt::ClipboardPaste) {
+                        log::error!("{:?}", err);
+                    }
+                })
+            }
+            else {
+                Box::new(move |evt| {
+                    if let Some(transfer) = evt.clipboard_data() {
+                        clipboard_content.replace(
+                            transfer.get_data("text")
+                            .map_err(|err| log::error!("{:?}", err)).ok()
+                        );
+                    }
+                })
+            };
 
             Self { listener: Closure::wrap(closure).into_js_value().into() }
         }
@@ -82,22 +97,20 @@ mod web_clipboard {
         content: Rc<RefCell<Option<String>>>,
         handle: Option<ClipboardHandle>,
         paste_listener: Option<PasteListener>,
+        event_proxy: Option<Rc<EventLoopProxy>>,
     }
 
     impl Clipboard {
 
-        pub fn connect(_window: &Window) -> Self {
-            Self::unconnected()
-        }
-
-        pub fn unconnected() -> Self {
+        pub fn connect(event_loop: &EventLoop) -> Self {
 
             let content = RefCell::new(None).into();
-            let paste_listener = PasteListener::new(Rc::clone(&content));
+            let paste_listener = PasteListener::new(Rc::clone(&content), Some(event_loop.create_proxy()));
 
             Self {
                 content,
                 handle: ClipboardHandle::new(),
+                event_proxy: Some(event_loop.create_proxy().into()),
                 paste_listener: match paste_listener.attach() {
                     Ok(()) => Some(paste_listener),
                     Err(err) => {
@@ -108,20 +121,56 @@ mod web_clipboard {
             }
         }
 
-        pub fn fetch(&self) { // fetches content from system clipboard async, may be called periodically
+        pub fn unconnected() -> Self {
+
+            let content = RefCell::new(None).into();
+            let paste_listener = PasteListener::new(Rc::clone(&content), None);
+
+            Self {
+                content,
+                handle: ClipboardHandle::new(),
+                event_proxy: None,
+                paste_listener: match paste_listener.attach() {
+                    Ok(()) => Some(paste_listener),
+                    Err(err) => {
+                        log::error!("{err}");
+                        None
+                    }
+                }
+            }
+        }
+
+        pub fn fetch(&self) { // fetches content from system clipboard asynchronously
             if let Some(ClipboardHandle {read: true, clipboard, ..}) = &self.handle {
 
                 let content = Rc::clone(&self.content);
                 let promise = clipboard.read_text();
 
-                wasm_bindgen_futures::spawn_local(async move {
-                    content.replace(
-                        match JsFuture::from(promise).await {
-                            Ok(res) => res.as_string(),
-                            Err(err) => { log::error!("{:?}", err); None },
+                if let Some(event_proxy) = &self.event_proxy {
+                    let event_proxy = Rc::clone(event_proxy);
+
+                    wasm_bindgen_futures::spawn_local(async move {
+                        content.replace(
+                            match JsFuture::from(promise).await {
+                                Ok(res) => res.as_string(),
+                                Err(err) => { log::error!("{:?}", err); None },
+                            }
+                        );
+                        if let Err(err) = event_proxy.send_event(EventExt::ClipboardFetch) {
+                            log::error!("{:?}", err);
                         }
-                    );
-                });
+                    });
+                }
+                else {
+                    wasm_bindgen_futures::spawn_local(async move {
+                        content.replace(
+                            match JsFuture::from(promise).await {
+                                Ok(res) => res.as_string(),
+                                Err(err) => { log::error!("{:?}", err); None },
+                            }
+                        );
+                    });
+                }
             }
         }
 
@@ -134,6 +183,25 @@ mod web_clipboard {
                 let _promise = clipboard.write_text(&text);
             }
             self.content.replace(Some(text));
+        }
+
+
+        // introspective methods
+
+        pub fn is_connected(&self) -> bool {
+            self.event_proxy.is_some()
+        }
+
+        pub fn is_listening(&self) -> bool {
+            self.paste_listener.is_some()
+        }
+
+        pub fn can_write(&self) -> bool {
+            matches!(self.handle, Some(ClipboardHandle {write: true, ..}))
+        }
+
+        pub fn can_fetch(&self) -> bool {
+            matches!(self.handle, Some(ClipboardHandle {read: true, ..}))
         }
     }
 

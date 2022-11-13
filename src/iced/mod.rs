@@ -1,6 +1,6 @@
 
-mod iced;
-pub use iced::*;
+mod gui;
+pub use gui::*;
 
 mod wgx_extension;
 pub use wgx_extension::*;
