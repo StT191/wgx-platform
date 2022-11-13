@@ -1,6 +1,6 @@
 [package]
 name = "platform"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Stefan Tammer <st.tammer@gmail.com>"]
 edition = "2021"
 
@@ -14,7 +14,7 @@ members = ["run-wasm"]
 
 [features]
 wake_lock = ["dep:nosleep", "web-sys/Navigator", "web-sys/WakeLock", "web-sys/WakeLockType", "web-sys/WakeLockSentinel"]
-iced = ["dep:iced_native", "dep:iced_winit", "web-sys/Navigator", "web-sys/Clipboard", "web-sys/ClipboardEvent", "web-sys/DataTransfer"]
+iced = ["dep:wgx", "dep:iced_native", "dep:iced_winit", "dep:iced_wgpu", "web-sys/Navigator", "web-sys/Clipboard", "web-sys/ClipboardEvent", "web-sys/DataTransfer"]
 icon_loader = ["dep:icon-loader", "dep:resvg"]
 
 
@@ -29,8 +29,10 @@ iced_graphics = { git = "https://github.com/bungoboingo/iced", rev = "365f37a" }
 [dependencies]
 winit = "0.27"
 log = "0"
+wgx = { path = "../wgx", optional = true }
 iced_native = { version = "0.6", optional = true }
 iced_winit = { version = "0.5", optional = true }
+iced_wgpu = { version = "0.6", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 icon-loader = { version = "0.3", optional = true }
@@ -52,8 +54,8 @@ console_log = "0"
 
 # dev-dependecies
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
-wgx = { path = "../wgx", features = ["timer", "iced"] }
+wgx = { path = "../wgx", features = ["timer"] }
 iced_graphics = { version = "*", features = ["canvas"] }
 
 [target.'cfg(target_family = "wasm")'.dev-dependencies]
-wgx = { path = "../wgx", features = ["timer", "iced", "webgl"] }
+wgx = { path = "../wgx", features = ["timer", "webgl"] }

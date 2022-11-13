@@ -4,9 +4,7 @@
 pub use iced_winit::winit;
 
 #[cfg(feature = "iced")]
-mod iced_clipboard;
-#[cfg(feature = "iced")]
-pub use iced_clipboard::*;
+pub mod iced;
 
 
 #[cfg(not(feature = "iced"))]

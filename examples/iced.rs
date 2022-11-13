@@ -5,7 +5,7 @@ use platform::winit::{
   window::Window, event::*,
 };
 
-use platform::{self, *, Event, Clipboard};
+use platform::{self, *, Event, iced::{Clipboard, *}};
 
 use iced_wgpu::Settings;
 const LOG_LEVEL: LogLevel = LogLevel::Warn;
@@ -145,7 +145,7 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
 
     // iced setup
-    let renderer = gx.iced_renderer(Settings::default(), target.format(), Some(4));
+    let renderer = renderer(&gx, Settings::default(), target.format(), Some(4));
 
     let clipboard = Clipboard::connect(&window);
     let mut gui = Iced::new_with_clipboad(renderer, Controls::new(), (width, height), &window, clipboard);
