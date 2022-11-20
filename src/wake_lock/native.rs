@@ -16,15 +16,18 @@ impl WakeLock {
     pub fn is_active(&self) -> bool { self.active }
 
     pub fn request(&mut self) -> Res<()> {
-        self.nosleep.start(NoSleepType::PreventUserIdleDisplaySleep).convert()?;
-        self.active = true;
+        if !self.active {
+            self.nosleep.start(NoSleepType::PreventUserIdleDisplaySleep).convert()?;
+            self.active = true;
+        }
         Ok(())
     }
 
     pub fn release(&mut self) -> Res<()> {
-        // let res = self.nosleep.stop().convert();
-        *self = Self::new()?;
-        // res
+        if self.active {
+            self.nosleep.stop().convert()?;
+            self.active = false;
+        }
         Ok(())
     }
 }

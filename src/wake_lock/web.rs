@@ -19,7 +19,10 @@ impl WakeLock {
             return Err("navigator.wakeLock is not supported".to_string());
         }
 
-        Ok(Self { locker: window.navigator().wake_lock().into(), lock: RefCell::new(None).into() })
+        Ok(Self {
+            locker: window.navigator().wake_lock().into(),
+            lock: RefCell::new(None).into()
+        })
     }
 
     pub fn is_active(&self) -> bool { self.lock.borrow().is_some() }
@@ -27,16 +30,14 @@ impl WakeLock {
     pub fn request(&mut self) -> Res<()> {
         let _res = self.release();
 
-        {
-            let lock = Rc::clone(&self.lock);
-            let promise = self.locker.request(WakeLockType::Screen);
+        let lock = Rc::clone(&self.lock);
+        let promise = self.locker.request(WakeLockType::Screen);
 
-            wasm_bindgen_futures::spawn_local(async move {
-                if let Ok(res) = JsFuture::from(promise).await {
-                    lock.replace(Some(WakeLockSentinel::from(res)));
-                }
-            });
-        }
+        wasm_bindgen_futures::spawn_local(async move {
+            if let Ok(res) = JsFuture::from(promise).await {
+                lock.replace(Some(WakeLockSentinel::from(res)));
+            }
+        });
 
         Ok(())
     }
