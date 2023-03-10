@@ -70,7 +70,7 @@ pub fn load_image_with_resize(path: impl AsRef<Path>, map_size: impl FnOnce((u32
         Some("svg") => {
 
             let svg_data = std::fs::read(path).convert()?;
-            let rtree = Tree::from_data(&svg_data, &Options::default().to_ref()).convert()?;
+            let rtree = Tree::from_data(&svg_data, &Options::default()).convert()?;
 
             let (w, h) = map_size((rtree.size.width() as u32, rtree.size.height() as u32)); // possible resize
 
