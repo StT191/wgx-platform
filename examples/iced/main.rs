@@ -26,17 +26,17 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
     #[cfg(target_family = "wasm")] let limits = Limits::downlevel_webgl2_defaults();
 
 
-    let (gx, surface) = Wgx::new(Some(window), Features::empty(), limits).await.unwrap();
+    let (gx, surface) = unsafe {Wgx::new(Some(window), Features::empty(), limits)}.await.unwrap();
     let mut target = SurfaceTarget::new(&gx, surface.unwrap(), (width, height), MSAA, DEPTH_TESTING).unwrap();
 
 
     // iced gui setup
-    #[cfg(not(target_family = "wasm"))] let clipboard = Clipboard::connect(&window);
+    #[cfg(not(target_family = "wasm"))] let clipboard = Clipboard::connect(window);
     #[cfg(target_family = "wasm")] let clipboard = Clipboard::connect(&event_loop);
 
     let renderer = renderer(&gx, Settings::default(), target.format(), Some(4));
 
-    let mut gui = Gui::new(renderer, ui::Ui::new(), (width, height), &window, clipboard);
+    let mut gui = Gui::new(renderer, ui::Ui::new(), (width, height), window, clipboard);
 
     gui.theme = ui::theme();
 
@@ -88,7 +88,7 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
                 let (need_redraw, _cmd) = gui.update();
 
-                gui.update_cursor(&window);
+                gui.update_cursor(window);
 
                 let advanced = frame_timer.advance_if_elapsed();
 
@@ -103,11 +103,11 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
             Event::RedrawRequested(_) => {
 
-                target.with_encoder_frame(&gx, |mut encoder, frame| {
+                target.with_encoder_frame(&gx, |encoder, frame| {
 
                     encoder.render_pass(frame.attachments(Some(gui.program().bg_color), None));
 
-                    gui.draw(&gx, &mut encoder, frame);
+                    gui.draw(&gx, encoder, frame);
 
                 }).expect("frame error");
 

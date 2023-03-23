@@ -7,8 +7,7 @@ use platform::iced::{*};
 use wgx::{Color};
 
 
-#[cfg(not(target_family = "wasm"))]
-use iced_graphics::{widget::{Canvas, canvas::{self, Cursor, Geometry, Frame, Path, event::Status}}, Rectangle};
+use iced_graphics::{Rectangle, widget::{Canvas, canvas::{self, Cursor, Geometry, Frame, Path, event::Status}}};
 
 
 // gui
@@ -42,10 +41,8 @@ impl Ui {
 }
 
 
-#[cfg(not(target_family = "wasm"))]
 struct Circle(f32);
 
-#[cfg(not(target_family = "wasm"))]
 impl<T> canvas::Program<Msg, T> for Circle {
 
     type State = Color;
@@ -98,12 +95,11 @@ impl Program for Ui {
             .align_items(Alignment::Center)
         ;
 
-        #[cfg(not(target_family = "wasm"))]
         let column = column.push(
             Row::new().spacing(65)
-            .push(Canvas::new(Circle(bg_color.r)).width(100.into()).height(100.into()))
-            .push(Canvas::new(Circle(bg_color.g)).width(100.into()).height(100.into()))
-            .push(Canvas::new(Circle(bg_color.b)).width(100.into()).height(100.into()))
+            .push(Canvas::new(Circle(bg_color.r)).width(100.0).height(100.0))
+            .push(Canvas::new(Circle(bg_color.g)).width(100.0).height(100.0))
+            .push(Canvas::new(Circle(bg_color.b)).width(100.0).height(100.0))
         );
 
         column.push(
@@ -118,13 +114,13 @@ impl Program for Ui {
             Text::new("Background color").style(Color::WHITE.iced_wgpu())
         )
         .push(
-            Row::new().width(Length::Units(500)).spacing(10)
+            Row::new().width(Length::Fixed(500.0)).spacing(10)
             .push(Slider::new(0.0..=1.0, bg_color.r, move |v| Msg::BgColor(Color {r: v, ..bg_color})).step(0.00390625))
             .push(Slider::new(0.0..=1.0, bg_color.g, move |v| Msg::BgColor(Color {g: v, ..bg_color})).step(0.00390625))
             .push(Slider::new(0.0..=1.0, bg_color.b, move |v| Msg::BgColor(Color {b: v, ..bg_color})).step(0.00390625))
         )
         .push(
-            Row::new().width(Length::Units(65)).push(
+            Row::new().width(Length::Fixed(65.0)).push(
                 Text::new(format!("{}", bg_color.hex_rgb())).size(18).style(Color::WHITE.iced_wgpu())
             )
         )

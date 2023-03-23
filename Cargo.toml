@@ -1,6 +1,6 @@
 [package]
 name = "platform"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Stefan Tammer <st.tammer@gmail.com>"]
 edition = "2021"
 
@@ -18,21 +18,13 @@ iced = ["dep:wgx", "dep:iced_native", "dep:iced_winit", "dep:iced_wgpu", "web-sy
 icon_loader = ["dep:icon-loader", "dep:resvg"]
 
 
-[patch.crates-io]
-# patch iced wasm builds
-iced_native = { git = "https://github.com/bungoboingo/iced", rev = "365f37a" }
-iced_winit = { git = "https://github.com/bungoboingo/iced", rev = "365f37a" }
-iced_wgpu = { git = "https://github.com/bungoboingo/iced", rev = "365f37a" }
-iced_graphics = { git = "https://github.com/bungoboingo/iced", rev = "365f37a" }
-
-
 [dependencies]
 winit = "0.27"
 log = "0"
 wgx = { path = "../wgx", optional = true }
-iced_native = { version = "0.6", optional = true }
-iced_winit = { version = "0.5", optional = true }
-iced_wgpu = { version = "0.6", optional = true }
+iced_native = { version = "0.9", optional = true }
+iced_winit = { version = "0.8", optional = true }
+iced_wgpu = { version = "0.9", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 icon-loader = { version = "0.3", optional = true }
@@ -52,10 +44,10 @@ console_error_panic_hook = "0.1"
 console_log = "0"
 
 
-# dev-dependecies
-[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
-wgx = { path = "../wgx", features = ["timer"] }
+[dev-dependencies]
+wgx = { path = "../wgx", features = ["timer", "wgsl_modules", "projection"] }
 iced_graphics = { version = "*", features = ["canvas"] }
 
+
 [target.'cfg(target_family = "wasm")'.dev-dependencies]
-wgx = { path = "../wgx", features = ["timer", "webgl"] }
+wgx = { path = "../wgx", features = ["webgl"] }
