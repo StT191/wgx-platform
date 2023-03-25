@@ -22,15 +22,13 @@ use super::Clipboard;
 // iced renderer constructor
 
 pub fn renderer<T>(gx:&impl WgxDevice, mut settings:Settings, format:TextureFormat, msaa:Option<u32>) -> Renderer<T> {
-    if let Some(msaa) = msaa {
-        settings.antialiasing = match msaa {
-            2 => Some(Antialiasing::MSAAx2),
-            4 => Some(Antialiasing::MSAAx4),
-            8 => Some(Antialiasing::MSAAx8),
-            16 => Some(Antialiasing::MSAAx16),
-            _ => None,
-        }
-    }
+    settings.antialiasing = match msaa {
+        Some(2) => Some(Antialiasing::MSAAx2),
+        Some(4) => Some(Antialiasing::MSAAx4),
+        Some(8) => Some(Antialiasing::MSAAx8),
+        Some(16) => Some(Antialiasing::MSAAx16),
+        _ => None,
+    };
     Renderer::new(Backend::new(gx.device(), settings, format))
 }
 
