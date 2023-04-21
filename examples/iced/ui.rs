@@ -108,7 +108,8 @@ impl Program for Ui {
             .size(20).style(Color::WHITE.iced_wgpu())
         )
         .push(
-            TextInput::new("input text", &self.text, Msg::Text).size(20).padding(4)
+            TextInput::new("input text", &self.text).size(20).padding(4)
+            .on_input(|input| Msg::Text(input))
         )
         .push(
             Text::new("Background color").style(Color::WHITE.iced_wgpu())

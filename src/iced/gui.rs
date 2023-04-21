@@ -141,7 +141,7 @@ impl<T, P> Gui<T, P> where
 
         #[cfg(target_family = "wasm")]
         if paste && self.clipboard.is_connected() {
-            return // handle events with paste_from_clipboard method
+            return; // handle events with paste_from_clipboard method
         }
 
         if let Some(event) = iced_winit::conversion::window_event(

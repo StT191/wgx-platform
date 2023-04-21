@@ -93,7 +93,7 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
                 let advanced = frame_timer.advance_if_elapsed();
 
                 if need_redraw && *control_flow != ControlFlow::WaitUntil(frame_timer.next) {
-                    * control_flow = if advanced {
+                    *control_flow = if advanced {
                         window.request_redraw();
                         ControlFlow::Wait
                     }

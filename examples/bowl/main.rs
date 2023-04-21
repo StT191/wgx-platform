@@ -1,5 +1,5 @@
 
-use std::{time::{Instant}};
+use instant::Instant;
 use platform::winit::{dpi::PhysicalSize, window::Window, event_loop::{ControlFlow}, event::{*}};
 use platform::{*, Event};
 use wgx::{*, cgmath::*};
@@ -13,13 +13,14 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
   const MSAA:u32 = 4;
   const ALPHA_BLENDING:Option<BlendState> = None;
 
-
-  let (width, height) = (1000, 1000);
-
-  window.set_inner_size(PhysicalSize::<u32>::from((width, height)));
   window.set_title("WgFx");
 
-  let (gx, surface) = unsafe {Wgx::new(Some(window), Features::MULTI_DRAW_INDIRECT, limits!{})}.await.unwrap();
+  let PhysicalSize {width, height} = window.inner_size();
+
+  #[cfg(not(target_family = "wasm"))] let (limits, features) = (Limits::default(), Features::MULTI_DRAW_INDIRECT);
+  #[cfg(target_family = "wasm")] let (limits, features) = (Limits::downlevel_webgl2_defaults(), Features::empty());
+
+  let (gx, surface) = unsafe {Wgx::new(Some(window), features, limits)}.await.unwrap();
   let mut target = SurfaceTarget::new(&gx, surface.unwrap(), (width, height), MSAA, DEPTH_TESTING).unwrap();
 
 
@@ -55,8 +56,8 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
 
   // vertexes
-  let steps = 48usize;
-  let smooth = true;
+  let steps = 12usize;
+  let smooth = false;
 
 
   let step_a = steps as f32 / std::f32::consts::FRAC_PI_2; // step angle
@@ -134,7 +135,7 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
   let mesh_range = group.vertices.write_multiple(None, &mesh);
   let instance_range = group.instances.write_multiple(None, &instance_data);
 
-  group.indirect.write(None, &DrawIndirect::from_ranges(mesh_range, instance_range).unwrap());
+  group.indirect.write(None, &DrawIndirect::try_from_ranges(mesh_range, instance_range).unwrap());
 
   group.write_buffers(&gx, .., .., ..);
 
@@ -190,8 +191,8 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
       Event::WindowEvent { event: WindowEvent::Resized(size), .. } => {
         target.update(&gx, (size.width, size.height));
 
-        // width = size.width as f32;
-        // height = size.height as f32;
+        let width = size.width as f32;
+        let height = size.height as f32;
 
         let fov = FovProjection::window(fov_deg, width, height);
         projection = fov.projection * fov.translation;
@@ -201,6 +202,8 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
         gx.write_buffer(&clip_buffer, 0, AsRef::<[f32; 16]>::as_ref(&clip_matrix));
         // gx.write_buffer(&mut viewport_buffer, 0, &[width, height]);
+
+        window.request_redraw();
       },
 
       Event::WindowEvent { event:WindowEvent::KeyboardInput { input: KeyboardInput {
@@ -257,11 +260,19 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
             rpass.set_bind_group(0, &binding, &[]);
             rpass.set_vertex_buffer(0, group.vertices.buffer.slice(..));
             rpass.set_vertex_buffer(1, group.instances.buffer.slice(..));
+
+            #[cfg(not(target_family = "wasm"))]
             rpass.multi_draw_indirect(&group.indirect.buffer, 0, group.indirect.len() as u32);
+
+            #[cfg(target_family = "wasm")]
+            for indirect in &group.indirect.data {
+              rpass.draw(indirect.vertex_range().unwrap(), indirect.instance_range().unwrap());
+            }
+
           });
         }).expect("frame error");
 
-        println!("{:?}", then.elapsed());
+        log::warn!("{:?}", then.elapsed());
       },
 
       _ => {}
