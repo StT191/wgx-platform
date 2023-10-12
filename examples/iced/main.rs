@@ -111,7 +111,7 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
                 }).expect("frame error");
 
-                gui.recall_staging_belt();
+                // gui.recall_staging_belt();
 
                 // frame_counter.add();
                 // if let Some(counted) = frame_counter.count() { println!("{:?}", counted) }

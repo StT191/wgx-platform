@@ -2,7 +2,7 @@
 use crate::error::*;
 use std::{sync::Arc, path::{Path, PathBuf}};
 use ::icon_loader::{IconLoader, ThemeNameProvider::{GTK, KDE}, SearchPaths, Icon, Error as IconError};
-use resvg::{usvg::{Tree, Options, FitTo}, tiny_skia::{Pixmap, Transform, PixmapPaint}};
+use resvg::{Tree, usvg::{Tree as UsvgTree, Options, TreeParsing}, tiny_skia::{Pixmap, Transform, PixmapPaint}};
 
 
 pub fn find_icon(name: &str) -> Res<Arc<Icon>> {
@@ -61,7 +61,7 @@ pub fn load_image_with_resize(path: impl AsRef<Path>, map_size: impl FnOnce((u32
 
                 let trs = Transform::from_scale(w as f32 / sw as f32, h as f32 / sh as f32); // stretch to fill
 
-                pixmap.draw_pixmap(0, 0, src.as_ref(), &PixmapPaint::default(), trs, None).ok_or("couldn't resize pixmap")?;
+                pixmap.draw_pixmap(0, 0, src.as_ref(), &PixmapPaint::default(), trs, None);
 
                 Ok(pixmap.take())
             }
@@ -70,13 +70,13 @@ pub fn load_image_with_resize(path: impl AsRef<Path>, map_size: impl FnOnce((u32
         Some("svg") => {
 
             let svg_data = std::fs::read(path).convert()?;
-            let rtree = Tree::from_data(&svg_data, &Options::default()).convert()?;
+            let rtree = Tree::from_usvg(&UsvgTree::from_data(&svg_data, &Options::default()).convert()?);
 
             let (w, h) = map_size((rtree.size.width() as u32, rtree.size.height() as u32)); // possible resize
 
             let mut pixmap = Pixmap::new(w, h).ok_or("couldn't create pixmap")?;
 
-            resvg::render(&rtree, FitTo::Size(w, h), Transform::default(), pixmap.as_mut()).ok_or("couldn't render svg")?;
+            rtree.render(Transform::default(), &mut pixmap.as_mut());
 
             Ok(pixmap.take())
         },

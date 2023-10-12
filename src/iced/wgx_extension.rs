@@ -1,21 +1,13 @@
 
+use iced_winit::core as iced_core;
+
 // extend wgx color
-pub trait IntoIcedWgpuColor {
-    fn iced_wgpu(self) -> iced_wgpu::Color;
+pub trait IntoIcedCoreColor {
+    fn iced_core(self) -> iced_core::Color;
 }
 
-impl IntoIcedWgpuColor for wgx::Color {
-    fn iced_wgpu(self) -> iced_wgpu::Color {
-        iced_wgpu::Color { r: self.r, g: self.g, b: self.b, a: self.a }
-    }
-}
-
-pub trait IntoIcedNativeColor {
-    fn iced_native(self) -> iced_native::Color;
-}
-
-impl IntoIcedNativeColor for wgx::Color {
-    fn iced_native(self) -> iced_native::Color {
-        iced_wgpu::Color { r: self.r, g: self.g, b: self.b, a: self.a }
+impl IntoIcedCoreColor for wgx::Color {
+    fn iced_core(self) -> iced_core::Color {
+        iced_core::Color { r: self.r, g: self.g, b: self.b, a: self.a }
     }
 }

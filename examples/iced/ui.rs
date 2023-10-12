@@ -1,24 +1,31 @@
 
 use iced_wgpu::Renderer;
-use iced_native::{Alignment, Command, Element, Length, Program};
-use iced_native::widget::{Column, Row, Text, TextInput, Slider};
-use iced_native::theme::{Theme, Custom, Palette};
+
+use iced_winit::{
+    runtime::{Command, Program},
+    core::{Alignment, Element, Length, Rectangle, mouse::Cursor},
+    style::{theme::{Theme, Custom, Palette}},
+};
+
 use platform::iced::{*};
 use wgx::{Color};
 
 
-use iced_graphics::{Rectangle, widget::{Canvas, canvas::{self, Cursor, Geometry, Frame, Path, event::Status}}};
+use iced_widget::{
+    Canvas, canvas::{self, Geometry, Frame, Path, event::Status, Renderer as CanvasRenderer},
+    Column, Row, Text, TextInput, Slider,
+};
 
 
 // gui
 
 pub fn theme() -> Theme {
     Theme::Custom(Custom::new(Palette {
-        background: Color::WHITE.iced_native(),
-        text: Color::BLACK.iced_native(),
-        primary: Color::from([0.7; 3]).iced_native(),
-        success: Color::GREEN.iced_native(),
-        danger: Color::RED.iced_native(),
+        background: Color::WHITE.iced_core(),
+        text: Color::BLACK.iced_core(),
+        primary: Color::from([0.7; 3]).iced_core(),
+        success: Color::GREEN.iced_core(),
+        danger: Color::RED.iced_core(),
     }).into())
 }
 
@@ -41,21 +48,21 @@ impl Ui {
 }
 
 
-struct Circle(f32);
+/*struct Circle(f32);
 
-impl<T> canvas::Program<Msg, T> for Circle {
+impl<R: CanvasRenderer> canvas::Program<Msg, R> for Circle {
 
     type State = Color;
 
-    fn draw(&self, state: &Color, _theme: &T, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry>{
+    fn draw(&self, state: &Color, renderer: &R, _theme: &R::Theme, bounds: Rectangle, _cursor: Cursor) -> Vec<R::Geometry>{
 
-        let mut frame = Frame::new(bounds.size());
+        let mut frame = Frame::new(renderer, bounds.size());
 
         let max_radius = bounds.width.min(bounds.height) / 2.0;
 
         let circle = Path::circle(frame.center(), self.0 * max_radius);
 
-        frame.fill(&circle, state.iced_wgpu());
+        frame.fill(&circle, state.iced_core());
 
         vec![frame.into_geometry()]
     }
@@ -70,11 +77,11 @@ impl<T> canvas::Program<Msg, T> for Circle {
             (Status::Ignored, None)
         }
     }
-}
+}*/
 
 
 impl Program for Ui {
-    type Renderer = Renderer;
+    type Renderer = Renderer<Theme>;
     type Message = Msg;
 
     fn update(&mut self, message: Msg) -> Command<Msg> {
@@ -86,7 +93,7 @@ impl Program for Ui {
         Command::none()
     }
 
-    fn view(&self) -> Element<Msg, Renderer> {
+    fn view(&self) -> Element<Msg, Renderer<Theme>> {
         let bg_color = self.bg_color;
 
         let column = Column::new()
@@ -97,22 +104,22 @@ impl Program for Ui {
 
         let column = column.push(
             Row::new().spacing(65)
-            .push(Canvas::new(Circle(bg_color.r)).width(100.0).height(100.0))
+            /*.push(Canvas::new(Circle(bg_color.r)).width(100.0).height(100.0))
             .push(Canvas::new(Circle(bg_color.g)).width(100.0).height(100.0))
-            .push(Canvas::new(Circle(bg_color.b)).width(100.0).height(100.0))
+            .push(Canvas::new(Circle(bg_color.b)).width(100.0).height(100.0))*/
         );
 
         column.push(
             Text::new(&self.text)
             .width(Length::Fill).height(Length::Fill)
-            .size(20).style(Color::WHITE.iced_wgpu())
+            .size(20).style(Color::WHITE.iced_core())
         )
         .push(
             TextInput::new("input text", &self.text).size(20).padding(4)
             .on_input(|input| Msg::Text(input))
         )
         .push(
-            Text::new("Background color").style(Color::WHITE.iced_wgpu())
+            Text::new("Background color").style(Color::WHITE.iced_core())
         )
         .push(
             Row::new().width(Length::Fixed(500.0)).spacing(10)
@@ -121,8 +128,8 @@ impl Program for Ui {
             .push(Slider::new(0.0..=1.0, bg_color.b, move |v| Msg::BgColor(Color {b: v, ..bg_color})).step(0.00390625))
         )
         .push(
-            Row::new().width(Length::Fixed(65.0)).push(
-                Text::new(format!("{}", bg_color.hex_rgb())).size(18).style(Color::WHITE.iced_wgpu())
+            Row::new().width(Length::Fixed(80.0)).push(
+                Text::new(format!("#{}", bg_color.hex_rgb())).size(18).style(Color::WHITE.iced_core())
             )
         )
         .into()

@@ -216,7 +216,7 @@ mod web_clipboard {
 
 
     // make usable with iced
-    impl iced_native::clipboard::Clipboard for Clipboard {
+    impl iced_winit::core::Clipboard for Clipboard {
         fn read(&self) -> Option<String> { Clipboard::read(self) }
         fn write(&mut self, text: String) { Clipboard::write(self, text) }
     }

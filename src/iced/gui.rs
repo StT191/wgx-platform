@@ -1,27 +1,32 @@
 
 // iced and winit dependencies
-use iced_wgpu::{Viewport, Renderer, Antialiasing, Settings, Backend};
+use iced_wgpu::{Settings, Backend};
 
-use iced_winit::winit::{dpi::PhysicalPosition, window::Window, event::{WindowEvent, ModifiersState}};
-use iced_winit::{mouse::Interaction, conversion};
+use iced_winit::{
+    winit::{dpi::PhysicalPosition, window::Window, event::{WindowEvent, ModifiersState}},
+    graphics::{Renderer, Viewport, Antialiasing},
+    runtime::{program::{Program, State}, Command, Debug},
+    core::{mouse::{Interaction, Cursor}, Size, renderer::Style},
+    style::{application::StyleSheet},
+    conversion,
+};
 
 #[cfg(target_family = "wasm")]
-use iced_winit::winit::event::{KeyboardInput, ElementState, VirtualKeyCode};
+use iced_winit::{
+    winit::event::{KeyboardInput, ElementState, VirtualKeyCode},
+    runtime::{core::Event, keyboard},
+};
 
-use iced_native::{renderer::{Style}, program::{Program, State}, application::StyleSheet, Command, Debug, Size};
-
-#[cfg(target_family = "wasm")]
-use iced_native::{Event, keyboard};
 
 // wgpu/wgx and local dependencies
-use wgx::wgpu::{CommandEncoder, util::StagingBelt, TextureFormat};
-use wgx::{WgxDevice, RenderAttachable};
+use wgx::wgpu::{CommandEncoder, /*util::StagingBelt,*/ TextureFormat};
+use wgx::{WgxDeviceQueue, RenderAttachable};
 use super::Clipboard;
 
 
 // iced renderer constructor
 
-pub fn renderer<T>(gx:&impl WgxDevice, mut settings:Settings, format:TextureFormat, msaa:Option<u32>) -> Renderer<T> {
+pub fn renderer<T>(gx:&impl WgxDeviceQueue, mut settings:Settings, format:TextureFormat, msaa:Option<u32>) -> Renderer<Backend, T> {
     settings.antialiasing = match msaa {
         Some(2) => Some(Antialiasing::MSAAx2),
         Some(4) => Some(Antialiasing::MSAAx4),
@@ -29,7 +34,7 @@ pub fn renderer<T>(gx:&impl WgxDevice, mut settings:Settings, format:TextureForm
         Some(16) => Some(Antialiasing::MSAAx16),
         _ => None,
     };
-    Renderer::new(Backend::new(gx.device(), settings, format))
+    Renderer::new(Backend::new(gx.device(), gx.queue(), settings, format))
 }
 
 
@@ -37,9 +42,9 @@ pub fn renderer<T>(gx:&impl WgxDevice, mut settings:Settings, format:TextureForm
 
 pub struct Gui<T, P> where
     T: StyleSheet,
-    P:'static + Program<Renderer=Renderer<T>>,
+    P:'static + Program<Renderer=Renderer<Backend, T>>,
 {
-    renderer: Renderer<T>,
+    renderer: Renderer<Backend, T>,
     state: State<P>,
     viewport: Viewport,
     cursor: PhysicalPosition<f64>,
@@ -48,17 +53,17 @@ pub struct Gui<T, P> where
     pub theme: T,
     pub style: Style,
     clipboard: Clipboard,
-    staging_belt: StagingBelt,
+    // staging_belt: StagingBelt,
     debug: Debug,
 }
 
 
 impl<T, P> Gui<T, P> where
     T: StyleSheet + Default,
-    P:'static + Program<Renderer=Renderer<T>>,
+    P:'static + Program<Renderer=Renderer<Backend, T>>,
 {
 
-    pub fn new(mut renderer:Renderer<T>, program:P, (width, height):(u32, u32), window:&Window, clipboard:Clipboard) -> Self {
+    pub fn new(mut renderer:Renderer<Backend, T>, program:P, (width, height):(u32, u32), window:&Window, clipboard:Clipboard) -> Self {
 
         let mut debug = Debug::new();
 
@@ -76,7 +81,7 @@ impl<T, P> Gui<T, P> where
             theme: T::default(),
             style: Style::default(),
             clipboard,
-            staging_belt: StagingBelt::new(10240),
+            // staging_belt: StagingBelt::new(10240),
             debug,
         }
     }
@@ -189,10 +194,10 @@ impl<T, P> Gui<T, P> where
 
             let (_events, command) = self.state.update(
                 self.viewport.logical_size(),
-                conversion::cursor_position(
+                Cursor::Available(conversion::cursor_position(
                     self.cursor,
                     self.viewport.scale_factor(),
-                ),
+                )),
                 &mut self.renderer,
                 &self.theme,
                 &self.style,
@@ -206,16 +211,18 @@ impl<T, P> Gui<T, P> where
     }
 
 
-    pub fn draw(&mut self, gx:&impl WgxDevice, encoder:&mut CommandEncoder, target:&impl RenderAttachable) {
+    pub fn draw(&mut self, gx:&impl WgxDeviceQueue, encoder:&mut CommandEncoder, target:&impl RenderAttachable) {
 
         // borrow before the closure
-        let (staging_belt, viewport, debug) = (&mut self.staging_belt, &self.viewport, &self.debug);
+        let (/*staging_belt,*/ viewport, debug) = (/*&mut self.staging_belt,*/ &self.viewport, &self.debug);
 
         self.renderer.with_primitives(|backend, primitive| {
             backend.present(
                 gx.device(),
-                staging_belt,
+                gx.queue(),
+                // staging_belt,
                 encoder,
+                None,
                 target.color_views().0,
                 primitive,
                 viewport,
@@ -223,11 +230,11 @@ impl<T, P> Gui<T, P> where
             );
         });
 
-        self.staging_belt.finish();
+        // self.staging_belt.finish();
     }
 
 
-    pub fn recall_staging_belt(&mut self) {
+    /*pub fn recall_staging_belt(&mut self) {
         self.staging_belt.recall();
-    }
+    }*/
 }
