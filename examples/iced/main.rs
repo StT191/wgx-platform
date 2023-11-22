@@ -44,7 +44,7 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
     // let mut frame_counter = timer::IntervalCounter::from_secs(5.0);
 
     /*#[cfg(target_family = "wasm")]
-    let mut clipboard_timer = timer::StepInterval::from_secs(1.0 / 10.0); // max every 100ms*/
+    let mut clipboard_timer = timer::Interval::from_secs(1.0 / 10.0); // max every 100ms*/
 
 
     event_loop.run(move |event, _, control_flow| {
@@ -90,14 +90,15 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
                 gui.update_cursor(window);
 
-                let advanced = frame_timer.advance_if_elapsed();
+                let advanced = frame_timer.step_if_elapsed() >= 1;
 
-                if need_redraw && *control_flow != ControlFlow::WaitUntil(frame_timer.next) {
-                    *control_flow = if advanced {
+                if need_redraw {
+                    if advanced {
                         window.request_redraw();
-                        ControlFlow::Wait
+                        control_flow.set_wait();
+                    } else {
+                        *control_flow = ControlFlow::WaitUntil(frame_timer.next);
                     }
-                    else { ControlFlow::WaitUntil(frame_timer.next) }
                 }
             }
 

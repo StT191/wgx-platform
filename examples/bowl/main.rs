@@ -11,7 +11,7 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
   const DEPTH_TESTING:bool = true;
   const MSAA:u32 = 4;
-  const ALPHA_BLENDING:Option<BlendState> = None;
+  const ALPHA_BLENDING:Option<Blend> = None;
 
   window.set_title("WgFx");
 
@@ -34,12 +34,12 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
       vertex_desc!(Vertex, 0 => Float32x3, 1 => Float32x3, 2 => Float32x3),
       vertex_desc!(Instance, 3 => Float32x4, 4 => Float32x4, 5 => Float32x4, 6 => Float32x4)
     ],
-    (&shader, "vs_main", Primitive::TriangleList),
+    (&shader, "vs_main", Primitive::default()),
     (&shader, "fs_main", ALPHA_BLENDING),
   );
 
   // colors
-  let color_texture = TextureLot::new_2d_with_data(&gx, (1, 1), 1, TEXTURE, TexUse::TEXTURE_BINDING, [255u8, 0, 0, 255]);
+  let color_texture = TextureLot::new_2d_with_data(&gx, (1, 1), 1, DEFAULT_SRGB, None, TexUse::TEXTURE_BINDING, [255u8, 0, 0, 255]);
 
   let sampler = gx.default_sampler();
 
@@ -129,15 +129,12 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
     Matrix4::<f32>::from_nonuniform_scale(-1.0,-1.0,-1.0),
   ];
 
+  let indirect_buffer = gx.buffer_from_data(BufUse::INDIRECT, [
+    DrawIndirect::try_from_ranges(0..mesh.len(), 0..instance_data.len()).unwrap(),
+  ]);
 
-  let mut group = MultiDrawIndirect::new(&gx, (None, mesh.len()), (None, 2*instance_data.len()), (None, 1));
-
-  let mesh_range = group.vertices.write_multiple(None, &mesh);
-  let instance_range = group.instances.write_multiple(None, &instance_data);
-
-  group.indirect.write(None, &DrawIndirect::try_from_ranges(mesh_range, instance_range).unwrap());
-
-  group.write_buffers(&gx, .., .., ..);
+  let vertex_buffer = gx.buffer_from_data(BufUse::VERTEX, mesh);
+  let instance_buffer = gx.buffer_from_data(BufUse::VERTEX, instance_data);
 
 
   // matrix
@@ -258,16 +255,18 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
           encoder.with_render_pass(frame.attachments(Some(Color::BLACK), Some(1.0)), |mut rpass| {
             rpass.set_pipeline(&pipeline);
             rpass.set_bind_group(0, &binding, &[]);
-            rpass.set_vertex_buffer(0, group.vertices.buffer.slice(..));
-            rpass.set_vertex_buffer(1, group.instances.buffer.slice(..));
+            rpass.set_vertex_buffer(0, vertex_buffer.slice(..));
+            rpass.set_vertex_buffer(1, instance_buffer.slice(..));
 
-            #[cfg(not(target_family = "wasm"))]
-            rpass.multi_draw_indirect(&group.indirect.buffer, 0, group.indirect.len() as u32);
+            rpass.draw_indirect(&indirect_buffer, 0);
 
-            #[cfg(target_family = "wasm")]
-            for indirect in &group.indirect.data {
-              rpass.draw(indirect.vertex_range().unwrap(), indirect.instance_range().unwrap());
-            }
+            // #[cfg(not(target_family = "wasm"))]
+            // rpass.multi_draw_indirect(&group.indirect.buffer, 0, group.indirect.len() as u32);
+
+            // #[cfg(target_family = "wasm")]
+            // for indirect in &group.indirect.data {
+            //   rpass.draw(indirect.vertex_range().unwrap(), indirect.instance_range().unwrap());
+            // }
 
           });
         }).expect("frame error");
