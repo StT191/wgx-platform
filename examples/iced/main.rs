@@ -40,11 +40,11 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
     gui.theme = ui::theme();
 
-    let mut frame_timer = timer::StepInterval::from_secs(1.0 / 60.0);
-    // let mut frame_counter = timer::IntervalCounter::from_secs(5.0);
+    let mut frame_timer = StepInterval::from_secs(1.0 / 60.0);
+    // let mut frame_counter = IntervalCounter::from_secs(5.0);
 
     /*#[cfg(target_family = "wasm")]
-    let mut clipboard_timer = timer::Interval::from_secs(1.0 / 10.0); // max every 100ms*/
+    let mut clipboard_timer = StepInterval::from_secs(1.0 / 10.0); // max every 100ms*/
 
 
     event_loop.run(move |event, _, control_flow| {
@@ -124,5 +124,5 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 }
 
 fn main() {
-    platform::main(run, LOG_LEVEL);
+    platform::main(|wb| wb, run, LOG_LEVEL);
 }

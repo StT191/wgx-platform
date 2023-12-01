@@ -280,5 +280,5 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 }
 
 fn main() {
-  platform::main(run, LOG_LEVEL);
+  platform::main(|wb| wb, run, LOG_LEVEL);
 }

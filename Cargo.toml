@@ -1,6 +1,6 @@
 [package]
 name = "platform"
-version = "0.1.7"
+version = "0.2.0"
 authors = ["Stefan Tammer <st.tammer@gmail.com>"]
 edition = "2021"
 
@@ -13,6 +13,7 @@ members = ["run-wasm"]
 
 
 [features]
+timer = ["dep:instant"]
 wake_lock = ["dep:nosleep", "web-sys/Navigator", "web-sys/WakeLock", "web-sys/WakeLockType", "web-sys/WakeLockSentinel"]
 iced = ["dep:wgx", "dep:iced_winit", "dep:iced_wgpu", "web-sys/Navigator", "web-sys/Clipboard", "web-sys/ClipboardEvent", "web-sys/DataTransfer"]
 icon_loader = ["dep:icon-loader", "dep:resvg"]
@@ -21,6 +22,8 @@ icon_loader = ["dep:icon-loader", "dep:resvg"]
 [dependencies]
 winit = "0.28"
 log = "0"
+async-trait = "0.1"
+instant = { version = "0.1", features = ["wasm-bindgen"], optional = true }
 wgx = { version = "0.16.3", path = "../wgx", optional = true }
 iced_winit = { version = "0.10", optional = true }
 iced_wgpu = { version = "0.11", optional = true }
@@ -45,9 +48,8 @@ console_log = "0"
 
 
 [dev-dependencies]
-wgx = { path = "../wgx", features = ["timer", "wgsl_modules", "projection"] }
+wgx = { path = "../wgx", features = ["wgsl_modules", "projection"] }
 iced_widget = { version = "*", features = ["canvas"] }
-instant = { version = "0.1", features = ["wasm-bindgen"] }
 
 
 [target.'cfg(target_family = "wasm")'.dev-dependencies]

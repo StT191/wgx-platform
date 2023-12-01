@@ -1,8 +1,14 @@
 
 use std::future::Future;
-use crate::winit::event_loop::{EventLoop as WinitEventLoop, EventLoopBuilder, EventLoopProxy as WinitEventLoopProxy};
-use crate::winit::{event::Event as WinitEvent, window::Window as WinitWindow};
+use crate::winit;
+use winit::event_loop::{EventLoop as WinitEventLoop, EventLoopBuilder, EventLoopProxy as WinitEventLoopProxy};
+use winit::{event::Event as WinitEvent, window::{Window as WinitWindow, WindowBuilder}};
 use crate::LogLevel;
+
+
+#[cfg(target_family="wasm")]
+pub use winit::platform::web::{WindowExtWebSys, WindowBuilderExtWebSys};
+
 
 #[derive(Debug)]
 pub enum EventExt {
@@ -15,17 +21,21 @@ pub type EventLoopProxy = WinitEventLoopProxy<EventExt>;
 pub type Event<'a> = WinitEvent<'a, EventExt>;
 
 
-pub fn main<F: Future<Output=()> + 'static>(run: impl FnOnce(&'static WinitWindow, EventLoop) -> F, level: LogLevel) {
+pub fn main<F: Future<Output=()> + 'static>(
+    with_window_builder: impl FnOnce(WindowBuilder) -> WindowBuilder,
+    run: impl FnOnce(&'static WinitWindow, EventLoop) -> F,
+    log_level: LogLevel,
+) {
 
     // init + logger
 
     #[cfg(not(target_family="wasm"))] {
-        simple_logger::init_with_level(level).unwrap();
+        simple_logger::init_with_level(log_level).unwrap();
     }
 
     #[cfg(target_family="wasm")] {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-        console_log::init_with_level(level).expect("could not initialize logger");
+        console_log::init_with_level(log_level).expect("could not initialize logger");
     }
 
 
@@ -35,18 +45,22 @@ pub fn main<F: Future<Output=()> + 'static>(run: impl FnOnce(&'static WinitWindo
     // further init and run
 
     #[cfg(not(target_family="wasm"))] {
-        let window = &*Box::leak(WinitWindow::new(&event_loop).expect("couldn't create window").into());
+        let window = &*Box::leak(
+            with_window_builder(WindowBuilder::new())
+            .build(&event_loop)
+            .expect("couldn't create window").into()
+        );
         pollster::block_on(run(window, event_loop));
     }
 
     #[cfg(target_family="wasm")] {
 
-        use crate::winit::{platform::web::{WindowExtWebSys, WindowBuilderExtWebSys}, window::WindowBuilder, dpi::PhysicalSize};
+        use crate::winit::dpi::PhysicalSize;
         use wasm_bindgen::{JsValue, closure::Closure};
         use web_sys::{Window as WebWindow, Event};
 
         let window = &*Box::leak(
-            WindowBuilder::new()
+            with_window_builder(WindowBuilder::new())
             .with_prevent_default(false)
             .build(&event_loop)
             .expect("couldn't create window").into()
