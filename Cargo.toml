@@ -1,6 +1,6 @@
 [package]
 name = "platform"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Stefan Tammer <st.tammer@gmail.com>"]
 edition = "2021"
 
@@ -15,8 +15,9 @@ members = ["run-wasm"]
 [features]
 timer = ["dep:instant"]
 wake_lock = ["dep:nosleep", "web-sys/Navigator", "web-sys/WakeLock", "web-sys/WakeLockType", "web-sys/WakeLockSentinel"]
-iced = ["dep:wgx", "dep:iced_winit", "dep:iced_wgpu", "web-sys/Navigator", "web-sys/Clipboard", "web-sys/ClipboardEvent", "web-sys/DataTransfer"]
+wgx = ["dep:wgx"]
 icon_loader = ["dep:icon-loader", "dep:resvg"]
+iced = ["wgx", "dep:iced_winit", "dep:iced_wgpu", "web-sys/Navigator", "web-sys/Clipboard", "web-sys/ClipboardEvent", "web-sys/DataTransfer"]
 
 
 [dependencies]
@@ -24,18 +25,20 @@ winit = "0.28"
 log = "0"
 async-trait = "0.1"
 instant = { version = "0.1", features = ["wasm-bindgen"], optional = true }
-wgx = { version = "0.16.3", path = "../wgx", optional = true }
-iced_winit = { version = "0.10", optional = true }
-iced_wgpu = { version = "0.11", optional = true }
+wgx = { version = "0.18.2", path = "../wgx", optional = true }
+# iced_winit = { version = "0.10", optional = true }
+iced_winit = { git = "https://github.com/iced-rs/iced", rev="7f8b176", optional = true }
+# iced_wgpu = { version = "0.11", optional = true }
+iced_wgpu = { git = "https://github.com/iced-rs/iced", rev="7f8b176", optional = true }
 
 
 [target.'cfg(target_os = "linux")'.dependencies]
-icon-loader = { version = "0.3", optional = true }
-resvg = { version = "^0.35", optional = true }
+icon-loader = { version = "0.4", optional = true }
+resvg = { version = "^0.36", optional = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-pollster = "0.2"
-simple_logger = "2"
+pollster = "0.3"
+simple_logger = "4"
 nosleep = { version = "0.2", optional = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
@@ -44,13 +47,13 @@ wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3" }
 js-sys = { version = "0.3" }
 console_error_panic_hook = "0.1"
-console_log = "0"
+console_log = "1"
 
 
 [dev-dependencies]
 wgx = { path = "../wgx", features = ["wgsl_modules", "projection"] }
-iced_widget = { version = "*", features = ["canvas"] }
-
+# iced_widget = { version = "*", features = ["canvas"] }
+iced_widget = { git = "https://github.com/iced-rs/iced", rev="7f8b176", features = ["canvas"] }
 
 [target.'cfg(target_family = "wasm")'.dev-dependencies]
 wgpu = { version = "*", features = ["webgl"] }

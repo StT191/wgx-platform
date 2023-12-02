@@ -6,7 +6,7 @@ use crate::{Duration, StepInterval};
 use crate::{WakeLock};
 
 use crate::winit::{window::{Window, WindowBuilder}, event::{WindowEvent, StartCause}};
-use crate::{async_trait, LogLevel, main, Event, DetectChanges};
+use crate::{async_trait, LogLevel, main, Event, DetectChanges, error::inspect};
 
 
 #[cfg(feature = "timer")]
@@ -18,18 +18,18 @@ pub trait Application: Sized + 'static {
 
   // animation
   #[cfg(feature = "timer")]
-  fn frame_duration(&self) -> Option<Duration>;
+  fn frame_duration(&self) -> Duration { STD_FRAME_DURATION }
 
   #[cfg(feature = "timer")]
-  fn animate(&self) -> bool;
+  fn animate(&self) -> bool { false }
 
 
   // wake lock
   #[cfg(feature = "wake_lock")]
-  fn wake_lock(&self) -> bool;
+  fn wake_lock(&self) -> bool { false }
 
 
-  // provided defaults
+  // log level
 
   fn log_level() -> LogLevel { LogLevel::Warn }
 
@@ -37,6 +37,7 @@ pub trait Application: Sized + 'static {
     // optionally modify window building, default: pass original
     window_builder
   }
+
 
   // init
   async fn init(window: &Window) -> Self;
@@ -48,17 +49,11 @@ pub trait Application: Sized + 'static {
 
 
   fn run() {
-    main(Self::with_window_builder, |window, event_loop| async move {
-
-      fn inspect(err: impl std::fmt::Display) { log::warn!("{err}") }
+    main(Self::log_level(), Self::with_window_builder, |window, event_loop| async move {
 
       // frame timer
       #[cfg(feature = "timer")]
       let mut frame_timer = StepInterval::new(STD_FRAME_DURATION);
-
-      #[cfg(feature = "timer")]
-      let mut animate = DetectChanges::new(false);
-
 
       // wake lock
       #[cfg(feature = "wake_lock")]
@@ -67,6 +62,10 @@ pub trait Application: Sized + 'static {
 
       // instantiate app
       let mut app = Self::init(window).await;
+
+
+      #[cfg(feature = "timer")]
+      let mut animate = DetectChanges::new(!app.animate()); // force to change on first event
 
 
       // event loop
@@ -97,7 +96,7 @@ pub trait Application: Sized + 'static {
               window.request_redraw();
 
               // reset frame timer
-              frame_timer = StepInterval::new(app.frame_duration().unwrap_or(STD_FRAME_DURATION));
+              frame_timer = StepInterval::new(app.frame_duration());
               control_flow.set_wait_until(frame_timer.next);
 
             } else {
@@ -155,7 +154,7 @@ pub trait Application: Sized + 'static {
         }
       });
 
-    }, Self::log_level());
+    });
   }
 
 }

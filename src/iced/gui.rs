@@ -6,7 +6,7 @@ use iced_winit::{
     winit::{dpi::PhysicalPosition, window::Window, event::{WindowEvent, ModifiersState}},
     graphics::{Renderer, Viewport, Antialiasing},
     runtime::{program::{Program, State}, Command, Debug},
-    core::{mouse::{Interaction, Cursor}, Size, renderer::Style},
+    core::{mouse::{Interaction, Cursor}, Pixels, Size, Font, renderer::Style},
     style::{application::StyleSheet},
     conversion,
 };
@@ -34,7 +34,11 @@ pub fn renderer<T>(gx:&impl WgxDeviceQueue, mut settings:Settings, format:Textur
         Some(16) => Some(Antialiasing::MSAAx16),
         _ => None,
     };
-    Renderer::new(Backend::new(gx.device(), gx.queue(), settings, format))
+    Renderer::new(
+        Backend::new(gx.device(), gx.queue(), settings, format),
+        Font::DEFAULT,
+        Pixels(12.0),
+    )
 }
 
 
@@ -223,6 +227,7 @@ impl<T, P> Gui<T, P> where
                 // staging_belt,
                 encoder,
                 None,
+                target.view_format(),
                 target.color_views().0,
                 primitive,
                 viewport,

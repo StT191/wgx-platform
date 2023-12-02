@@ -25,7 +25,7 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
 
   // pipeline
-  let shader = gx.load_wgsl(include_wgsl_module!("./v3d_inst_text_diff.wgsl"));
+  let shader = gx.load_wgsl(wgsl_modules::include!("./shader_3d_inst_text_diff.wgsl"));
 
 
   // triangle pipeline

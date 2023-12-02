@@ -18,3 +18,7 @@ pub trait ConvertResult<T, E> {
 impl<T, E: ToString> ConvertResult<T, E> for Result<T, E> {
     fn convert(self) -> Res<T> { self.map_err(error) }
 }
+
+
+pub fn inspect(err: impl std::fmt::Display) { log::warn!("{err}") }
+

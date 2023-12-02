@@ -1,7 +1,7 @@
 
 use crate::error::*;
 use std::{sync::Arc, path::{Path, PathBuf}};
-use ::icon_loader::{IconLoader, ThemeNameProvider::{GTK, KDE}, SearchPaths, Icon, Error as IconError};
+use ::icon_loader::{IconLoader, ThemeNameProvider::{GTK, KDE}, SearchPaths, Icon};
 use resvg::{Tree, usvg::{Tree as UsvgTree, Options, TreeParsing}, tiny_skia::{Pixmap, Transform, PixmapPaint}};
 
 
@@ -26,10 +26,9 @@ pub fn find_icon(name: &str) -> Res<Arc<Icon>> {
     themes.into_iter().find_map(|provider| {
         loader.set_theme_name_provider(provider);
         loader.update_theme_name().ok()?;
-        loader.load_icon(name).ok()
+        loader.load_icon(name)
     })
-    .ok_or(IconError::IconNotFound { icon_name: name.to_string() })
-    .convert()
+    .ok_or(format!("icon '{name}' not was not found"))
 }
 
 

@@ -22,9 +22,9 @@ pub type Event<'a> = WinitEvent<'a, EventExt>;
 
 
 pub fn main<F: Future<Output=()> + 'static>(
+    log_level: LogLevel,
     with_window_builder: impl FnOnce(WindowBuilder) -> WindowBuilder,
     run: impl FnOnce(&'static WinitWindow, EventLoop) -> F,
-    log_level: LogLevel,
 ) {
 
     // init + logger

@@ -1,7 +1,14 @@
 
+// re-exports
+pub use async_trait::async_trait;
+
+#[cfg(not(target_family="wasm"))]
+pub use pollster;
+
 // log
 pub use log;
 pub use log::Level as LogLevel;
+
 
 // mods
 mod conditional_execution;
@@ -16,11 +23,14 @@ pub use application::*;
 pub mod error;
 
 
-// re-exports
-pub use async_trait::async_trait;
+// wgx
+#[cfg(feature = "wgx")]
+pub use wgx;
 
-#[cfg(not(target_family="wasm"))]
-pub use pollster;
+#[cfg(feature = "wgx")]
+mod gx_application;
+#[cfg(feature = "wgx")]
+pub use gx_application::*;
 
 
 // timer
