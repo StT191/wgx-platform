@@ -1,6 +1,7 @@
 
-use platform::winit::{dpi::{PhysicalSize}, event_loop::ControlFlow, window::Window, event::*};
-use platform::{self, *, Event, iced::{*}};
+use std::sync::Arc;
+use platform::winit::{dpi::{PhysicalSize}, event_loop::ControlFlow, window::{Window, WindowBuilder}, event::*};
+use platform::{*, WinitEvent as Event, iced::{*}};
 use wgx::{*};
 use iced_wgpu::Settings;
 
@@ -9,8 +10,7 @@ const LOG_LEVEL: LogLevel = LogLevel::Warn;
 
 mod ui;
 
-
-async fn run(window: &'static Window, event_loop: EventLoop) {
+async fn run(event_loop: EventLoop, window: Arc<Window>) {
 
     const DEPTH_TESTING:bool = false;
     // const ALPHA_BLENDING:bool = false;
@@ -21,22 +21,17 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
     let PhysicalSize {width, height} = window.inner_size();
 
-    // wgx setup
-    #[cfg(not(target_family = "wasm"))] let limits = Limits::default();
-    #[cfg(target_family = "wasm")] let limits = Limits::downlevel_webgl2_defaults();
-
-
-    let (gx, surface) = unsafe {Wgx::new(Some(window), Features::empty(), limits)}.await.unwrap();
+    let (gx, surface) = unsafe {Wgx::new(Some(&*window), features!(), limits!())}.await.unwrap();
     let mut target = SurfaceTarget::new(&gx, surface.unwrap(), (width, height), MSAA, DEPTH_TESTING).unwrap();
 
 
     // iced gui setup
-    #[cfg(not(target_family = "wasm"))] let clipboard = Clipboard::connect(window);
+    #[cfg(not(target_family = "wasm"))] let clipboard = Clipboard::connect(&window);
     #[cfg(target_family = "wasm")] let clipboard = Clipboard::connect(&event_loop);
 
     let renderer = renderer(&gx, Settings::default(), target.format(), Some(4));
 
-    let mut gui = Gui::new(renderer, ui::Ui::new(), (width, height), window, clipboard);
+    let mut gui = Gui::new(renderer, ui::Ui::new(), (width, height), &window, clipboard);
 
     gui.theme = ui::theme();
 
@@ -88,7 +83,7 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
                 let (need_redraw, _cmd) = gui.update();
 
-                gui.update_cursor(window);
+                gui.update_cursor(&window);
 
                 let advanced = frame_timer.step_if_elapsed() >= 1;
 
@@ -124,5 +119,8 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 }
 
 fn main() {
-    platform::main(|wb| wb, run, LOG_LEVEL);
+  init(LOG_LEVEL);
+  let event_loop = event_loop();
+  let window = window(WindowBuilder::new(), &event_loop);
+  spawn_local(run(event_loop, window));
 }

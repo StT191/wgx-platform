@@ -1,13 +1,14 @@
 
+use std::sync::Arc;
 use instant::Instant;
-use platform::winit::{dpi::PhysicalSize, window::Window, event_loop::{ControlFlow}, event::{*}};
-use platform::{*, Event};
+use platform::winit::{dpi::PhysicalSize, window::{Window, WindowBuilder}, event_loop::{ControlFlow}, event::{*}};
+use platform::{*, WinitEvent as Event};
 use wgx::{*, cgmath::*};
 
 const LOG_LEVEL: LogLevel = LogLevel::Warn;
 
 
-async fn run(window: &'static Window, event_loop: EventLoop) {
+async fn run(event_loop: EventLoop, window: Arc<Window>) {
 
   const DEPTH_TESTING:bool = true;
   const MSAA:u32 = 4;
@@ -17,10 +18,10 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
 
   let PhysicalSize {width, height} = window.inner_size();
 
-  #[cfg(not(target_family = "wasm"))] let (limits, features) = (Limits::default(), Features::MULTI_DRAW_INDIRECT);
-  #[cfg(target_family = "wasm")] let (limits, features) = (Limits::downlevel_webgl2_defaults(), Features::empty());
+  #[cfg(not(target_family = "wasm"))] let features = features!(MULTI_DRAW_INDIRECT);
+  #[cfg(target_family = "wasm")] let features = features!();
 
-  let (gx, surface) = unsafe {Wgx::new(Some(window), features, limits)}.await.unwrap();
+  let (gx, surface) = unsafe {Wgx::new(Some(&*window), features, limits!())}.await.unwrap();
   let mut target = SurfaceTarget::new(&gx, surface.unwrap(), (width, height), MSAA, DEPTH_TESTING).unwrap();
 
 
@@ -129,8 +130,11 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
     Matrix4::<f32>::from_nonuniform_scale(-1.0,-1.0,-1.0),
   ];
 
+  let (mesh_len, instance_len) = (mesh.len(), instance_data.len());
+
+  #[cfg(not(target_family = "wasm"))]
   let indirect_buffer = gx.buffer_from_data(BufUse::INDIRECT, [
-    DrawIndirect::try_from_ranges(0..mesh.len(), 0..instance_data.len()).unwrap(),
+    DrawIndirect::try_from_ranges(0..mesh_len, 0..instance_len).unwrap(),
   ]);
 
   let vertex_buffer = gx.buffer_from_data(BufUse::VERTEX, mesh);
@@ -258,15 +262,12 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
             rpass.set_vertex_buffer(0, vertex_buffer.slice(..));
             rpass.set_vertex_buffer(1, instance_buffer.slice(..));
 
+
+            #[cfg(not(target_family = "wasm"))]
             rpass.draw_indirect(&indirect_buffer, 0);
 
-            // #[cfg(not(target_family = "wasm"))]
-            // rpass.multi_draw_indirect(&group.indirect.buffer, 0, group.indirect.len() as u32);
-
-            // #[cfg(target_family = "wasm")]
-            // for indirect in &group.indirect.data {
-            //   rpass.draw(indirect.vertex_range().unwrap(), indirect.instance_range().unwrap());
-            // }
+            #[cfg(target_family = "wasm")]
+            rpass.draw(0..mesh_len as u32, 0..instance_len as u32);
 
           });
         }).expect("frame error");
@@ -279,6 +280,10 @@ async fn run(window: &'static Window, event_loop: EventLoop) {
   });
 }
 
+
 fn main() {
-  platform::main(|wb| wb, run, LOG_LEVEL);
+  init(LOG_LEVEL);
+  let event_loop = event_loop();
+  let window = window(WindowBuilder::new(), &event_loop);
+  spawn_local(run(event_loop, window));
 }
