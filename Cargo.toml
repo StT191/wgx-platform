@@ -8,9 +8,6 @@ edition = "2021"
 name = "platform"
 doctest = false
 
-[workspace]
-members = ["run-wasm"]
-
 
 [features]
 timer = ["dep:instant"]
