@@ -1,12 +1,12 @@
 
-use platform::winit::{window::WindowBuilder, /*event::WindowEvent*/};
+use platform::winit::{window::WindowBuilder, event::WindowEvent};
 use wgx::{*, /*cgmath::**/};
 use platform::{*, frame_ctx::*, error::inspect};
 
 async fn run() {
 
   let event_loop = event_loop();
-  let window = window(WindowBuilder::new(), &event_loop);
+  let window = window(WindowBuilder::new(), &event_loop).await;
 
   let ctx = GxCtx::new(&window, features!(TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES), limits!(), 16, false).await;
   let GxCtx {gx, target} = &ctx;
@@ -37,9 +37,7 @@ async fn run() {
   ctx.run(FrameCtx::new(), event_loop, window, move |_frame_ctx, GxCtx {gx, target}, event| {
     match event {
 
-      Event::WindowEvent(_window_event) => {},
-
-      Event::RedrawRequested => {
+      WindowEvent::RedrawRequested => {
         target.with_frame(None, |frame| gx.with_encoder(|encoder| {
 
           encoder.with_render_pass(frame.attachments(Some(Color::BLACK), None), |mut rpass| {
@@ -49,6 +47,8 @@ async fn run() {
 
         })).unwrap_or_else(inspect);
       }
+
+      _ => {},
     }
   });
 

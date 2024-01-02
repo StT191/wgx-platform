@@ -1,6 +1,6 @@
 
 use std::sync::Arc;
-use crate::winit::{window::{Window, /*WindowId,*/}, event::{WindowEvent, StartCause}};
+use crate::winit::{window::{Window, /*WindowId,*/}, event::{WindowEvent, StartCause}, event_loop::ControlFlow};
 use crate::{*, error::inspect};
 
 
@@ -16,13 +16,6 @@ pub struct FrameCtx {
 }
 
 
-#[derive(Debug)]
-pub enum Event<'a> {
-  WindowEvent(&'a WindowEvent<'a>),
-  RedrawRequested,
-}
-
-
 impl FrameCtx {
 
   pub fn new() -> Self { Self {
@@ -34,7 +27,7 @@ impl FrameCtx {
   pub fn run(mut self,
     event_loop: EventLoop,
     window: Arc<Window>,
-    mut event_handler: impl FnMut(&mut FrameCtx, Event) + 'static
+    mut event_handler: impl FnMut(&mut FrameCtx, &WindowEvent) + 'static
   ) {
 
     // wake lock
@@ -53,12 +46,12 @@ impl FrameCtx {
     // event loop
     // let window_id = window.id();
 
-    event_loop.run(move |event, _, control_flow| {
+    event_loop.run(move |event, event_target| {
 
       // handle app input first
       match &event {
         WinitEvent::WindowEvent { window_id: _id, event: window_event } /*if id == &window_id*/ => {
-          event_handler(&mut self, Event::WindowEvent(window_event));
+          event_handler(&mut self, window_event);
         },
         _ => {}
       }
@@ -79,36 +72,32 @@ impl FrameCtx {
 
             // reset frame timer
             frame_timer = StepInterval::new(self.duration);
-            control_flow.set_wait_until(frame_timer.next);
+            event_target.set_control_flow(ControlFlow::WaitUntil(frame_timer.next));
 
           } else {
             #[cfg(feature = "wake_lock")]
             wake_lock.as_mut().map(|lock| lock.release().unwrap_or_else(inspect));
 
-            control_flow.set_wait();
+            event_target.set_control_flow(ControlFlow::Wait);
           }
         }
       }
 
       match event {
 
-        WinitEvent::RedrawRequested(_id) /*if id == window_id*/ => {
-          event_handler(&mut self, Event::RedrawRequested);
-        },
-
         #[cfg(feature = "timer")]
         WinitEvent::NewEvents(StartCause::ResumeTimeReached {..}) => {
           if *animate.state() {
             window.request_redraw(); // request frame
             frame_timer.step();
-            control_flow.set_wait_until(frame_timer.next);
+            event_target.set_control_flow(ControlFlow::WaitUntil(frame_timer.next));
           }
         },
 
         WinitEvent::WindowEvent { window_id: _id, event: window_event } /*if id == window_id*/ => {
           match window_event {
 
-            WindowEvent::Resized(_)  => {
+            WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged {..} => {
               window.request_redraw();
             },
 
@@ -122,11 +111,7 @@ impl FrameCtx {
             }
 
             WindowEvent::CloseRequested => {
-              control_flow.set_exit();
-            },
-
-            WindowEvent::ScaleFactorChanged {..} => {
-              window.request_redraw();
+              event_target.exit();
             },
 
             _ => {}
@@ -134,7 +119,7 @@ impl FrameCtx {
         },
         _ => {}
       }
-    });
+    }).unwrap();
 
   }
 
@@ -166,23 +151,17 @@ mod gx_ctx {
       Self { gx, target }
     }
 
-
     pub fn run(mut self,
       frame_ctx: FrameCtx,
       event_loop: EventLoop,
       window: Arc<Window>,
-      mut event_handler: impl FnMut(&mut FrameCtx, &mut GxCtx, Event) + 'static,
+      mut event_handler: impl FnMut(&mut FrameCtx, &mut GxCtx, &WindowEvent) + 'static,
     ) {
       frame_ctx.run(event_loop, window, move |frame_ctx, event| {
 
         // resize handler
-        match event {
-
-          Event::WindowEvent(WindowEvent::Resized(size))  => {
-            self.target.update(&self.gx, (size.width as u32, size.height as u32));
-          },
-
-          _ => {}
+        if let WindowEvent::Resized(size) = &event {
+          self.target.update(&self.gx, (size.width as u32, size.height as u32));
         }
 
         event_handler(frame_ctx, &mut self, event);

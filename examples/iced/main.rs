@@ -13,14 +13,14 @@ async fn run() {
   // const ALPHA_BLENDING:Option<Blend> = None;
 
   let event_loop = event_loop();
-  let window = window(WindowBuilder::new(), &event_loop);
+  let window = window(WindowBuilder::new(), &event_loop).await;
 
   // window setup
   window.set_title("WgFx");
 
   let PhysicalSize {width, height} = window.inner_size();
 
-  let (gx, surface) = unsafe {Wgx::new(Some(&*window), features!(), limits!())}.await.unwrap();
+  let (gx, surface) = unsafe {Wgx::new(Some(&*window), features!(), limits!(max_inter_stage_shader_components: 60))}.await.unwrap();
   let mut target = SurfaceTarget::new(&gx, surface.unwrap(), (width, height), MSAA, DEPTH_TESTING).unwrap();
 
 
@@ -30,18 +30,22 @@ async fn run() {
 
   let renderer = renderer(&gx, Settings::default(), target.format(), Some(4));
 
-  let mut gui = Gui::new(renderer, ui::Ui::new(), (width, height), &window, clipboard);
+  let mut gui = Gui::new(renderer, ui::Ui::new(), &window, clipboard);
 
   gui.theme = ui::theme();
 
-  let mut frame_timer = StepInterval::from_secs(1.0 / 60.0);
   // let mut frame_counter = IntervalCounter::from_secs(5.0);
 
   /*#[cfg(target_family = "wasm")]
   let mut clipboard_timer = StepInterval::from_secs(1.0 / 10.0); // max every 100ms*/
 
+  const FRAME_DURATION: Duration = Duration::from_nanos(1_000_000_000 / 24);
 
-  event_loop.run(move |event, _, control_flow| {
+  let mut redraw_scheduled = false;
+  let mut next = Instant::now() + FRAME_DURATION;
+
+
+  event_loop.run(move |event, event_target| {
 
     /*#[cfg(target_family = "wasm")]
     if clipboard_timer.advance_if_elapsed() {
@@ -50,16 +54,11 @@ async fn run() {
 
     match event {
 
-      Event::NewEvents(StartCause::ResumeTimeReached {..}) => {
-        window.request_redraw(); // request frame
-        control_flow.set_wait();
-      }
-
       Event::WindowEvent { event, .. } => {
         match event {
 
           WindowEvent::CloseRequested => {
-            control_flow.set_exit();
+            event_target.exit();
           }
 
           WindowEvent::Resized(size) => {
@@ -67,56 +66,64 @@ async fn run() {
             window.request_redraw();
           }
 
+          WindowEvent::RedrawRequested => {
+
+            // frame handling
+            next = Instant::now() + FRAME_DURATION;
+            redraw_scheduled = false;
+            event_target.set_control_flow(ControlFlow::Wait);
+
+            // gui handling
+            gui.update();
+            gui.update_cursor(&window);
+
+            // draw
+            target.with_frame(None, |frame| gx.with_encoder(|encoder| {
+
+              encoder.render_pass(frame.attachments(Some(gui.program().bg_color), None));
+
+              gui.draw(&gx, encoder, frame);
+
+            })).expect("frame error");
+
+            /*frame_counter.add();
+            if let Some(counted) = frame_counter.count() { println!("{:?}", counted) }*/
+
+          }
+
           _ => (),
         }
 
-        gui.event(&event);
+        let event_was_queued = gui.event(&event);
+
+        // redraw handling
+        if !redraw_scheduled && event_was_queued {
+
+          if Instant::now() < next {
+            event_target.set_control_flow(ControlFlow::WaitUntil(next));
+          } else {
+            window.request_redraw();
+          }
+
+          redraw_scheduled = true;
+        }
       }
+
+      Event::NewEvents(StartCause::ResumeTimeReached {..}) => {
+        window.request_redraw();
+      }
+
 
       #[cfg(target_family = "wasm")]
       Event::UserEvent(EventExt::ClipboardPaste) => {
         gui.paste_from_clipboard();
       }
 
-      Event::MainEventsCleared => {
-
-        let (need_redraw, _cmd) = gui.update();
-
-        gui.update_cursor(&window);
-
-        let advanced = frame_timer.step_if_elapsed() >= 1;
-
-        if need_redraw {
-          if advanced {
-            window.request_redraw();
-            control_flow.set_wait();
-          } else {
-            *control_flow = ControlFlow::WaitUntil(frame_timer.next);
-          }
-        }
-      }
-
-      Event::RedrawRequested(_) => {
-
-        target.with_frame(None, |frame| gx.with_encoder(|encoder| {
-
-          encoder.render_pass(frame.attachments(Some(gui.program().bg_color), None));
-
-          gui.draw(&gx, encoder, frame);
-
-        })).expect("frame error");
-
-        // gui.recall_staging_belt();
-
-        // frame_counter.add();
-        // if let Some(counted) = frame_counter.count() { println!("{:?}", counted) }
-      }
-
       _ => {}
     }
-  });
-}
 
+  }).unwrap();
+}
 
 fn main() {
   init(LogLevel::Warn);

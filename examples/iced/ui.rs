@@ -1,4 +1,6 @@
 
+#![allow(unused_imports)]
+
 use iced_wgpu::Renderer;
 
 use iced_winit::{
@@ -112,14 +114,14 @@ impl Program for Ui {
         column.push(
             Text::new(&self.text)
             .width(Length::Fill).height(Length::Fill)
-            .size(20).style(Color::WHITE.iced_core())
+            .size(18).style(Color::WHITE.iced_core())
         )
         .push(
-            TextInput::new("input text", &self.text).size(20).padding(4)
+            TextInput::new("input text", &self.text).size(18).padding(4)
             .on_input(|input| Msg::Text(input))
         )
         .push(
-            Text::new("Background color").style(Color::WHITE.iced_core())
+            Text::new("Background color").size(16).style(Color::WHITE.iced_core())
         )
         .push(
             Row::new().width(Length::Fixed(500.0)).spacing(10)
@@ -129,7 +131,7 @@ impl Program for Ui {
         )
         .push(
             Row::new().width(Length::Fixed(80.0)).push(
-                Text::new(format!("#{}", bg_color.hex_rgb())).size(18).style(Color::WHITE.iced_core())
+                Text::new(format!("#{}", bg_color.hex_rgb())).size(16).style(Color::WHITE.iced_core())
             )
         )
         .into()

@@ -1,6 +1,6 @@
 [package]
 name = "platform"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Stefan Tammer <st.tammer@gmail.com>"]
 edition = "2021"
 
@@ -10,7 +10,7 @@ doctest = false
 
 
 [features]
-timer = ["dep:instant"]
+timer = []
 wake_lock = ["dep:nosleep", "web-sys/Navigator", "web-sys/WakeLock", "web-sys/WakeLockType", "web-sys/WakeLockSentinel"]
 wgx = ["dep:wgx"]
 icon_loader = ["dep:icon-loader", "dep:resvg"]
@@ -18,14 +18,14 @@ iced = ["wgx", "dep:iced_winit", "dep:iced_wgpu", "web-sys/Navigator", "web-sys/
 
 
 [dependencies]
-winit = "0.28"
+winit = { version = "0.29", features = ["rwh_05"] }
 log = "0"
-instant = { version = "0.1", features = ["wasm-bindgen"], optional = true }
+web-time = { version = "0" }
 wgx = { version = "0.18.4", path = "../wgx", optional = true }
 # iced_winit = { version = "0.10", optional = true }
-iced_winit = { git = "https://github.com/iced-rs/iced", rev="7f8b176", optional = true }
+iced_winit = { git = "https://github.com/iced-rs/iced", rev="031784e", optional = true }
 # iced_wgpu = { version = "0.11", optional = true }
-iced_wgpu = { git = "https://github.com/iced-rs/iced", rev="7f8b176", optional = true }
+iced_wgpu = { git = "https://github.com/iced-rs/iced", rev="031784e", optional = true }
 
 
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -49,7 +49,7 @@ console_log = "1"
 [dev-dependencies]
 wgx = { path = "../wgx", features = ["wgsl_modules", "projection"] }
 # iced_widget = { version = "*", features = ["canvas"] }
-iced_widget = { git = "https://github.com/iced-rs/iced", rev="7f8b176", features = ["canvas"] }
+iced_widget = { git = "https://github.com/iced-rs/iced", rev="031784e", features = ["canvas"] }
 
 [target.'cfg(target_family = "wasm")'.dev-dependencies]
 wgpu = { version = "*", features = ["webgl"] }

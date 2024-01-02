@@ -1,5 +1,7 @@
 
 // re-exports
+pub use web_time::{Instant, Duration};
+
 #[cfg(not(target_family="wasm"))]
 pub use pollster;
 

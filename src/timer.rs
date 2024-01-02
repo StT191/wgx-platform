@@ -1,5 +1,5 @@
 
-pub use instant::{Instant, Duration};
+use crate::{Instant, Duration};
 
 
 #[derive(Debug, Clone)]
@@ -66,16 +66,16 @@ impl StepInterval {
         Self::new(Duration::from_secs_f64(duration_secs))
     }
 
-    pub fn elapsed(&self) -> i32 {
+    pub fn elapsed(&self) -> i64 {
         let now = Instant::now();
         if now >= self.next {
-            ((now - self.next).as_nanos() / self.duration.as_nanos()) as i32 + 1
+            ((now - self.next).as_nanos() / self.duration.as_nanos()) as i64 + 1
         } else {
-            -(((self.next - now).as_nanos() / self.duration.as_nanos()) as i32)
+            -(((self.next - now).as_nanos() / self.duration.as_nanos()) as i64)
         }
     }
 
-    pub fn step_by(&mut self, times: i32) {
+    pub fn step_by(&mut self, times: i64) {
         if let Some(instant) = {
             if times.is_positive() {
                 self.next.checked_add(self.duration * times as u32)
@@ -87,13 +87,13 @@ impl StepInterval {
         }
     }
 
-    pub fn step_if_elapsed(&mut self) -> i32 {
+    pub fn step_if_elapsed(&mut self) -> i64 {
         let elapsed = self.elapsed();
         if elapsed >= 1 { self.step_by(elapsed) }
         elapsed
     }
 
-    pub fn step(&mut self) -> i32 {
+    pub fn step(&mut self) -> i64 {
         let elapsed = self.elapsed();
         // step even if not yet fully elapsed
         if elapsed >= 0 { self.step_by(elapsed.max(1)) }
