@@ -21,7 +21,7 @@ iced = ["wgx", "dep:iced_winit", "dep:iced_wgpu", "web-sys/Navigator", "web-sys/
 winit = "0.28"
 log = "0"
 instant = { version = "0.1", features = ["wasm-bindgen"], optional = true }
-wgx = { version = "0.18.3", path = "../wgx", optional = true }
+wgx = { version = "0.18.4", path = "../wgx", optional = true }
 # iced_winit = { version = "0.10", optional = true }
 iced_winit = { git = "https://github.com/iced-rs/iced", rev="7f8b176", optional = true }
 # iced_wgpu = { version = "0.11", optional = true }
