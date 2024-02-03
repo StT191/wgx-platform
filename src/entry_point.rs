@@ -93,7 +93,7 @@ pub async fn window(window_builder: WindowBuilder, target: &EventLoopWindowTarge
         wasm_bindgen_futures::JsFuture::from(
             js_sys::Promise::new(&mut |resolve: js_sys::Function, _: js_sys::Function| {
                 web_sys::window().unwrap()
-                .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, 1).unwrap();
+                .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, 50).unwrap();
             })
         ).await.unwrap();
 

@@ -140,11 +140,11 @@ mod gx_ctx {
 
   impl GxCtx {
 
-    pub async fn new(window: &Window, features: Features, limits: Limits, msaa: u32, depth_testing: bool) -> Self {
-
-      let (gx, surface) = unsafe { Wgx::new(Some(window), features, limits) }.await.unwrap();
+    pub async fn new(window: Arc<Window>, features: Features, limits: Limits, msaa: u32, depth_testing: bool) -> Self {
 
       let size = window.inner_size();
+
+      let (gx, surface) = Wgx::new(Some(window), features, limits).await.unwrap();
 
       let target = SurfaceTarget::new(&gx, surface.unwrap(), (size.width, size.height), msaa, depth_testing).unwrap();
 

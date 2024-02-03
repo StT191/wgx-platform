@@ -8,8 +8,10 @@ async fn run() {
   let event_loop = event_loop();
   let window = window(WindowBuilder::new(), &event_loop).await;
 
-  let ctx = GxCtx::new(&window, features!(TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES), limits!(), 16, false).await;
+  let ctx = GxCtx::new(window.clone(), features!(), limits!(), 4, false).await;
   let GxCtx {gx, target} = &ctx;
+
+  log::warn!("{:?}", gx.adapter.get_info());
 
 
   let shader = gx.load_wgsl(wgsl_modules::inline!("$shader" <= {
@@ -40,7 +42,7 @@ async fn run() {
       WindowEvent::RedrawRequested => {
         target.with_frame(None, |frame| gx.with_encoder(|encoder| {
 
-          encoder.with_render_pass(frame.attachments(Some(Color::BLACK), None), |mut rpass| {
+          encoder.with_render_pass(frame.attachments(Some(Color::BLACK), None), |rpass| {
             rpass.set_pipeline(&pipeline);
             rpass.draw(0..3, 0..1);
           });

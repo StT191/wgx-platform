@@ -21,7 +21,7 @@ async fn run() {
 
   let PhysicalSize {width, height} = window.inner_size();
 
-  let (gx, surface) = unsafe {Wgx::new(Some(&*window), features!(), limits!(max_inter_stage_shader_components: 60))}.await.unwrap();
+  let (gx, surface) = Wgx::new(Some(window.clone()), features!(), limits!(max_inter_stage_shader_components: 60)).await.unwrap();
   let mut target = SurfaceTarget::new(&gx, surface.unwrap(), (width, height), MSAA, DEPTH_TESTING).unwrap();
 
 
