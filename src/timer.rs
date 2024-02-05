@@ -78,9 +78,9 @@ impl StepInterval {
     pub fn step_by(&mut self, times: i64) {
         if let Some(instant) = {
             if times.is_positive() {
-                self.next.checked_add(self.duration * times as u32)
+                self.next.checked_add(self.duration.mul_f64(times as f64))
             } else {
-                self.next.checked_sub(self.duration * (-times) as u32)
+                self.next.checked_sub(self.duration.mul_f64(-times as f64))
             }
         } {
             self.next = instant
@@ -93,10 +93,10 @@ impl StepInterval {
         elapsed
     }
 
-    pub fn step(&mut self) -> i64 {
+    pub fn step_next(&mut self) -> i64 {
         let elapsed = self.elapsed();
-        // step even if not yet fully elapsed
-        if elapsed >= 0 { self.step_by(elapsed.max(1)) }
+        // step so that now < next <= now + elapsed.frac
+        self.step_by(if elapsed >= 1 { elapsed } else { elapsed - 1 });
         elapsed
     }
 }

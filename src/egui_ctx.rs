@@ -1,7 +1,7 @@
 
 use crate::winit::window::Window;
 use wgx::{WgxDevice, WgxDeviceQueue, RenderTarget, wgpu::{CommandEncoder, RenderPass}};
-pub use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
+pub use egui_wgpu::{Renderer, ScreenDescriptor};
 use epaint::{Rect, ClippedPrimitive, textures::TexturesDelta};
 
 

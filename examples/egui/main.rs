@@ -1,34 +1,24 @@
 
-use platform::winit::{dpi::{PhysicalSize}, event_loop::ControlFlow, window::{WindowBuilder}, event::*};
-use platform::{*, WinitEvent as Event};
+use platform::winit::{window::{WindowBuilder}, event::*};
+use platform::{*, frame_ctx::*, egui::*};
 use wgx::{*};
 
-use platform::egui::{*};
 
 mod ui;
 
 async fn run() {
 
-  const DEPTH_TESTING:bool = false;
-  const MSAA:u32 = 1;
-  // const ALPHA_BLENDING:Option<Blend> = None;
-
   let event_loop = event_loop();
-  let window = window(WindowBuilder::new(), &event_loop).await;
+  let window = window(WindowBuilder::new().with_title("WgFx"), &event_loop).await;
 
-  // window setup
-  window.set_title("WgFx");
-
-  let PhysicalSize {width, height} = window.inner_size();
-
-  let (gx, surface) = Wgx::new(Some(window.clone()), features!(), limits!(max_inter_stage_shader_components: 60)).await.unwrap();
-  let mut target = SurfaceTarget::new(&gx, surface.unwrap(), (width, height), MSAA, DEPTH_TESTING).unwrap();
+  let ctx = GxCtx::new(window.clone(), features!(), limits!(), 1, false).await;
+  let GxCtx {gx, target} = &ctx;
 
 
   // egui setup
 
   let mut ui = ui::new();
-  let mut egs_renderer = renderer(&gx, &target);
+  let mut egs_renderer = renderer(gx, target);
   let mut egs = EguiCtx::new(&window);
 
   // run to initialize
@@ -56,141 +46,95 @@ async fn run() {
 
   // epainting ...
 
-  let mut ept_renderer = renderer(&gx, &target);
-
+  let mut ept_renderer = renderer(gx, target);
   let mut ept = EpaintCtx::new(ScreenDescriptor::from_window(&window), 2048, FontDefinitions::default());
 
-  let primitives = {
+  let mut primitives = Vec::new();
 
-    let circle = Shape::circle_filled([100.0, 100.0].into(), 40.0, Color32::from_rgb(0xF0, 0xA0, 0x00));
+  let shapes = [
 
-    let text = Shape::text(
+    Shape::circle_filled([100.0, 100.0].into(), 40.0, Color32::from_rgb(0xF0, 0xA0, 0x00)),
+
+    Shape::text(
       &ept.fonts, [200.0, 220.0].into(), Align2::LEFT_CENTER,
       "EPAINT: HALLO TEST Hallo Test!",
       FontId { size: 14.0, family: FontFamily::default() },
       Color32::from_rgb(0xF0, 0x00, 0x00),
-    );
-
-    let mut primitives = Vec::new();
-
-    ept.tessellate(Default::default(), ept.clip_shapes([circle, text], None), &mut primitives);
-
-    primitives
-  };
-
-  gx.with_encoder(|encoder| {
-    ept.prepare(&mut ept_renderer, &gx, encoder, &primitives);
-  });
-
+    ),
+  ];
 
 
   // let mut frame_counter = IntervalCounter::from_secs(3.0);
 
-  const FRAME_DURATION: Duration = Duration::from_nanos(1_000_000_000 / 60);
+  event_loop.run(FrameCtx::new().run(window.clone(), ctx.run(move |frame_ctx, GxCtx {gx, target}, event| {
 
-  let mut redraw_scheduled = false;
-  let mut next = Instant::now() + FRAME_DURATION;
+    let (repaint, _) = egs.event(&window, &event);
 
-  event_loop.run(move |event, event_target| {
+    if repaint {
+      frame_ctx.request = Some(Duration::ZERO); // as early as possible
+    }
 
     match event {
 
-      Event::WindowEvent { event, .. } => {
-        match event {
+      WindowEvent::Resized(_) => {
 
-          WindowEvent::CloseRequested => {
-            event_target.exit();
+        // redraw epait ...
+        ept.screen_dsc = ScreenDescriptor::from_window(&window);
+
+        primitives.clear();
+
+        ept.tessellate(
+          Default::default(),
+          ept.clip_shapes(shapes.iter().cloned(), None),
+          &mut primitives
+        );
+
+        gx.with_encoder(|encoder| {
+          ept.prepare(&mut ept_renderer, gx, encoder, &primitives);
+        });
+      },
+
+      WindowEvent::RedrawRequested => {
+
+        // gui handling
+        let mut output = egs.run(&window, &mut ui);
+
+        output.clipped_primitives.extend_from_slice(&add_primitives);
+
+        // draw
+        target.with_frame(None, |frame| gx.with_encoder(|encoder| {
+
+          output.prepare(&mut egs_renderer, gx, encoder);
+
+          encoder.with_render_pass(frame.attachments(Some(Color::WHITE.into()), None), |mut rpass| {
+
+            output.render(&egs_renderer, &mut rpass);
+
+            ept.render(&ept_renderer, &mut rpass, &primitives);
+
+          });
+
+        })).expect("frame error");
+
+        // handle other commands
+        for command in output.commands {
+          println!("Cmd: {:#?}", command);
+          if command == ViewportCommand::Close {
+            frame_ctx.exit = true;
           }
-
-          WindowEvent::Resized(size) => {
-            target.update(&gx, (size.width, size.height));
-            window.request_redraw();
-          }
-
-          WindowEvent::RedrawRequested => {
-
-            // record last frame time
-            let last = Instant::now();
-
-
-            // gui handling
-            let mut output = egs.run(&window, &mut ui);
-
-            output.clipped_primitives.extend_from_slice(&add_primitives);
-
-            // draw
-            target.with_frame(None, |frame| gx.with_encoder(|encoder| {
-
-              output.prepare(&mut egs_renderer, &gx, encoder);
-
-              encoder.with_render_pass(frame.attachments(Some(Color::WHITE.into()), None), |mut rpass| {
-
-                output.render(&egs_renderer, &mut rpass);
-
-                ept.render(&ept_renderer, &mut rpass, &primitives);
-
-              });
-
-            })).expect("frame error");
-
-
-            // frame timing
-            next = last + FRAME_DURATION;
-            redraw_scheduled = false;
-
-            if output.repaint_delay < FRAME_DURATION {
-              // reschedule frame because we're animating
-              event_target.set_control_flow(ControlFlow::WaitUntil(next));
-              redraw_scheduled = true;
-            }
-            else {
-              if let Some(instant) = last.checked_add(output.repaint_delay) {
-                event_target.set_control_flow(ControlFlow::WaitUntil(instant));
-              }
-              else {
-                event_target.set_control_flow(ControlFlow::Wait);
-              }
-            }
-
-            for command in output.commands {
-              println!("Cmd: {:#?}", command);
-              if command == ViewportCommand::Close {
-                event_target.exit();
-              }
-            }
-
-            /*frame_counter.add();
-            if let Some(counted) = frame_counter.count() { println!("{:?}", counted) }*/
-
-          }
-
-          _ => (),
         }
 
-        let (repaint, _) = egs.event(&window, &event);
+        frame_ctx.request = Some(output.repaint_delay);
 
-        // redraw handling
-        if !redraw_scheduled && repaint {
+        /*frame_counter.add();
+        if let Some(counted) = frame_counter.count() { println!("{:?}", counted) }*/
 
-          if Instant::now() < next {
-            event_target.set_control_flow(ControlFlow::WaitUntil(next));
-          } else {
-            window.request_redraw();
-          }
+      },
 
-          redraw_scheduled = true;
-        }
-      }
-
-      Event::NewEvents(StartCause::ResumeTimeReached {..}) => {
-        window.request_redraw();
-      }
-
-
-      _ => {}
+      _ => (),
     }
 
-  }).unwrap();
+  }))).unwrap();
 }
 
 fn main() {

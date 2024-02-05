@@ -5,6 +5,7 @@ pub fn new() -> impl FnMut(&Context) -> () {
 
   let mut name = "".to_string();
   let mut age = 0;
+  let mut show_settings = false;
 
   move |ctx: &Context| {
 
@@ -12,6 +13,11 @@ pub fn new() -> impl FnMut(&Context) -> () {
       // The top panel is often a good place for a menu bar:
       menu::bar(ui, |ui| {
         ui.menu_button("File", |ui| {
+
+          if ui.button("Settings").clicked() {
+            show_settings = !show_settings;
+          }
+
           if ui.button("Quit").clicked() {
             ctx.send_viewport_cmd(ViewportCommand::Close);
           }
@@ -78,7 +84,9 @@ pub fn new() -> impl FnMut(&Context) -> () {
       painter.hline(40.0..=600.0, 30.0, Stroke::from((10.0, Color32::from_rgb(0xFF, 0x00, 0x00))));
 
 
-      // ctx.settings_ui(ui);
+      if show_settings {
+        ctx.settings_ui(ui);
+      }
     });
   }
 }

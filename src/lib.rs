@@ -6,9 +6,7 @@ pub use web_time::{Instant, Duration};
 #[cfg(not(target_family="wasm"))]
 pub use pollster;
 
-// log
-pub use log;
-pub use log::Level as LogLevel;
+pub use log::{self, Level as LogLevel};
 
 // mods
 mod conditional_execution;
@@ -16,6 +14,9 @@ pub use conditional_execution::*;
 
 mod entry_point;
 pub use entry_point::*;
+
+mod timer;
+pub use timer::*;
 
 pub mod frame_ctx;
 
@@ -28,11 +29,10 @@ pub use future::*;
 #[cfg(feature = "wgx")]
 pub use wgx;
 
-// timer
-#[cfg(feature = "timer")]
-mod timer;
-#[cfg(feature = "timer")]
-pub use timer::*;
+#[cfg(feature = "wgx")]
+mod gx_ctx;
+#[cfg(feature = "wgx")]
+pub use gx_ctx::*;
 
 // icon loader
 #[cfg(feature = "icon_loader")]

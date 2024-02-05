@@ -1,185 +1,246 @@
 
 use std::sync::Arc;
-use crate::winit::{window::{Window, /*WindowId,*/}, event::WindowEvent};
+use crate::winit::{window::{Window, /*WindowId,*/}, event::WindowEvent, event_loop::{EventLoopWindowTarget, ControlFlow}};
 
-#[cfg(feature = "timer")]
-use crate::winit::{event::StartCause, event_loop::ControlFlow};
+#[cfg(feature = "frame_timer")]
+use crate::winit::event::StartCause;
 
-#[cfg(feature = "wake_lock")]
+#[cfg(feature = "auto_wake_lock")]
 use crate::error::inspect;
 
-use crate::*;
+use crate::{*, EventLoopWindowTarget as PlatformEventLoopWindowTarget};
 
 
-#[cfg(feature = "timer")]
+#[cfg(feature = "frame_timer")]
 pub const STD_DURATION: Duration = Duration::from_nanos(1_000_000_000/60);
 
 
 #[derive(Debug)]
 pub struct FrameCtx {
-  #[cfg(feature = "timer")] pub duration: Duration,
-  #[cfg(feature = "timer")] pub animate: bool,
-  #[cfg(feature = "wake_lock")] pub wake_lock: bool,
+  #[cfg(feature = "frame_timer")] pub duration: Duration,
+  #[cfg(feature = "frame_timer")] pub animate: bool,
+  #[cfg(feature = "frame_timer")] pub request: Option<Duration>,
+  #[cfg(feature = "auto_wake_lock")] pub auto_wake_lock: bool,
+  pub exit: bool,
+}
+
+impl Default for FrameCtx {
+  fn default() -> Self { Self {
+    #[cfg(feature = "frame_timer")] duration: STD_DURATION,
+    #[cfg(feature = "frame_timer")] animate: false,
+    #[cfg(feature = "frame_timer")] request: None,
+    #[cfg(feature = "auto_wake_lock")] auto_wake_lock: false,
+    exit: false,
+  }}
+}
+
+
+pub trait ControlFlowExtension {
+  fn set_poll(&self);
+  fn set_wait(&self);
+  fn set_wait_until(&self, instant: Instant);
+  fn set_earlier(&self, instant: Instant);
+}
+
+impl<T> ControlFlowExtension for EventLoopWindowTarget<T> {
+
+  fn set_poll(&self) { self.set_control_flow(ControlFlow::Poll); }
+  fn set_wait(&self) { self.set_control_flow(ControlFlow::Wait); }
+  fn set_wait_until(&self, instant: Instant) { self.set_control_flow(ControlFlow::WaitUntil(instant)); }
+
+  fn set_earlier(&self, instant: Instant) {
+    match self.control_flow() {
+      ControlFlow::Poll => {},
+      ControlFlow::Wait => self.set_wait_until(instant),
+      ControlFlow::WaitUntil(other) => self.set_wait_until(instant.min(other)),
+    }
+  }
 }
 
 
 impl FrameCtx {
 
-  pub fn new() -> Self { Self {
-    #[cfg(feature = "timer")] duration: STD_DURATION,
-    #[cfg(feature = "timer")] animate: false,
-    #[cfg(feature = "wake_lock")] wake_lock: false,
-  }}
+  pub fn new() -> Self { Self::default() }
 
   pub fn run(mut self,
-    event_loop: EventLoop,
     window: Arc<Window>,
     mut event_handler: impl FnMut(&mut FrameCtx, &WindowEvent) + 'static
-  ) {
+  )
+    -> impl FnMut(WinitEvent, &PlatformEventLoopWindowTarget)
+  {
 
     // wake lock
-    #[cfg(feature = "wake_lock")]
+    #[cfg(feature = "auto_wake_lock")]
     let mut wake_lock: Option<WakeLock> = WakeLock::new().inspect_err(|err| inspect(err)).ok();
 
 
-    #[cfg(feature = "timer")]
+    #[cfg(feature = "frame_timer")]
     let mut animate = DetectChanges::new(!self.animate); // force to change on first event
 
-    // frame timer
-    #[cfg(feature = "timer")]
-    let mut frame_timer = StepInterval::new(self.duration);
+    #[cfg(feature = "frame_timer")]
+    let mut requested = DetectChanges::new(None); // force to change on first event
 
+    // frame timer
+    #[cfg(feature = "frame_timer")]
+    let mut last = Instant::now();
+
+    #[cfg(feature = "frame_timer")]
+    let mut next = last + self.duration;
 
     // event loop
     // let window_id = window.id();
 
-    event_loop.run(move |event, event_target| {
+    move |event, event_target| match event {
 
-      // handle app input first
-      match &event {
-        WinitEvent::WindowEvent { window_id: _id, event: window_event } /*if id == &window_id*/ => {
-          event_handler(&mut self, window_event);
-        },
-        _ => {}
-      }
+      #[cfg(feature = "frame_timer")]
+      WinitEvent::NewEvents(StartCause::ResumeTimeReached {..}) => {
+        window.request_redraw();
+      },
 
+      WinitEvent::WindowEvent { window_id: _id, event: window_event } /*if id == &window_id*/ => {
 
-      // detect state changes ... set control flow
-      #[cfg(feature = "timer")]
-      {
-        if animate.note_change(&self.animate) {
-          if *animate.state() {
+        // before user handler
+        match &window_event {
 
-            #[cfg(feature = "wake_lock")]
-            if self.wake_lock {
-              wake_lock.as_mut().map(|lock| lock.request().unwrap_or_else(inspect));
-            }
+          #[cfg(feature = "frame_timer")]
+          WindowEvent::RedrawRequested => {
 
-            window.request_redraw();
+            let now = Instant::now();
 
-            // reset frame timer
-            frame_timer = StepInterval::new(self.duration);
-            event_target.set_control_flow(ControlFlow::WaitUntil(frame_timer.next));
+            self.request = None;
+            requested.set_state(None);
 
-          } else {
-            #[cfg(feature = "wake_lock")]
-            wake_lock.as_mut().map(|lock| lock.release().unwrap_or_else(inspect));
+            last = if next > now || (next + self.duration) <= now {
+              now
+            } else {
+              next // avoid timer shifts
+            };
 
-            event_target.set_control_flow(ControlFlow::Wait);
-          }
+            next = last + self.duration;
+
+            if self.animate { event_target.set_wait_until(next); }
+            else { event_target.set_wait(); }
+          },
+
+          WindowEvent::CloseRequested => {
+            self.exit = true;
+          },
+
+          _ => {},
         }
-      }
 
-      match event {
 
-        #[cfg(feature = "timer")]
-        WinitEvent::NewEvents(StartCause::ResumeTimeReached {..}) => {
-          if *animate.state() {
-            window.request_redraw(); // request frame
-            frame_timer.step();
-            event_target.set_control_flow(ControlFlow::WaitUntil(frame_timer.next));
-          }
-        },
+        // exec event handler
+        event_handler(&mut self, &window_event);
 
-        WinitEvent::WindowEvent { window_id: _id, event: window_event } /*if id == window_id*/ => {
-          match window_event {
 
-            WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged {..} => {
-              window.request_redraw();
-            },
+        // handle iteraction
 
-            #[cfg(feature = "wake_lock")]
-            WindowEvent::Focused(focus) => {
-              if !focus {
-                wake_lock.as_mut().map(|lock| lock.release().unwrap_or_else(inspect));
-              } else if self.wake_lock {
+        if self.exit {
+          event_target.exit();
+          return;
+        }
+
+        // animation
+        #[cfg(feature = "frame_timer")] // detect state changes ... set control flow
+        {
+          if animate.note_change(&self.animate) {
+            if self.animate {
+
+              self.request = None;
+              requested.set_state(None);
+
+              #[cfg(feature = "auto_wake_lock")]
+              if self.auto_wake_lock {
                 wake_lock.as_mut().map(|lock| lock.request().unwrap_or_else(inspect));
               }
+
+              let now = Instant::now();
+
+              if next <= now {
+                next = now; // reset frame_timer
+                window.request_redraw();
+              }
+              else {
+                event_target.set_earlier(next);
+              }
             }
+            else {
+              #[cfg(feature = "auto_wake_lock")]
+              wake_lock.as_mut().map(|lock| lock.release().unwrap_or_else(inspect));
 
-            WindowEvent::CloseRequested => {
-              event_target.exit();
-            },
-
-            _ => {}
+              event_target.set_wait();
+            }
           }
-        },
-        _ => {}
-      }
-    }).unwrap();
 
-  }
+          if requested.changed(&self.request) {
 
-}
+            if self.animate {
+              self.request = None;
+              requested.set_state(None);
+            }
+            else if let Some(delay) = self.request {
 
+              let earlier = match requested.state() {
+                None => {
+                  requested.set_state(Some(delay));
+                  true // is definitely eralier
+                },
+                Some(state) if delay < *state => {
+                  requested.set_state(Some(delay));
+                  true // is earlier, checked
+                },
+                Some(previous) => {
+                  self.request = Some(*previous); // reset to previous
+                  false // is not earlier
+                },
+              };
 
-// wgx frame ctx
-#[cfg(feature = "wgx")]
-mod gx_ctx {
+              if earlier {
+                if let Some(instant) = last.checked_add(delay) {
 
-  use super::*;
-  use wgx::{Wgx, SurfaceTarget, Limits, Features};
+                  let now = Instant::now();
+                  if next < now { next = now }
 
-
-  #[derive(Debug)]
-  pub struct GxCtx { pub gx: Wgx, pub target: SurfaceTarget }
-
-
-  impl GxCtx {
-
-    pub async fn new(window: Arc<Window>, features: Features, limits: Limits, msaa: u32, depth_testing: bool) -> Self {
-
-      let size = window.inner_size();
-
-      let (gx, surface) = Wgx::new(Some(window), features, limits).await.unwrap();
-
-      let target = SurfaceTarget::new(&gx, surface.unwrap(), (size.width, size.height), msaa, depth_testing).unwrap();
-
-      Self { gx, target }
-    }
-
-    pub fn run(mut self,
-      frame_ctx: FrameCtx,
-      event_loop: EventLoop,
-      window: Arc<Window>,
-      mut event_handler: impl FnMut(&mut FrameCtx, &mut GxCtx, &WindowEvent) + 'static,
-    ) {
-      frame_ctx.run(event_loop, window, move |frame_ctx, event| {
-
-        // resize handler
-        if let WindowEvent::Resized(size) = &event {
-          self.target.update(&self.gx, (size.width as u32, size.height as u32));
+                  if instant > next {
+                    event_target.set_earlier(instant);
+                  }
+                  else {
+                    event_target.set_earlier(next);
+                  }
+                }
+                // else consider as infinite delay, keep ControlFLow::Wait
+              }
+            }
+            else {
+              self.request = *requested.state(); // reset to previous
+            }
+          }
         }
 
-        event_handler(frame_ctx, &mut self, event);
+        // other window event handling
+        match window_event {
 
-      });
+          WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged {..} => {
+            window.request_redraw();
+          },
+
+          #[cfg(feature = "auto_wake_lock")]
+          WindowEvent::Focused(focus) => {
+            if !focus {
+              wake_lock.as_mut().map(|lock| lock.release().unwrap_or_else(inspect));
+            } else if self.auto_wake_lock {
+              wake_lock.as_mut().map(|lock| lock.request().unwrap_or_else(inspect));
+            }
+          },
+
+          _ => {}
+        }
+
+      },
+
+      _ => {}
+
     }
   }
-
 }
-
-#[cfg(feature = "wgx")]
-pub use gx_ctx::*;
-
-

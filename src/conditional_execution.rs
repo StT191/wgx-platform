@@ -14,19 +14,22 @@ impl<T: PartialEq + Clone> DetectChanges<T> {
         &self.state
     }
 
+    pub fn set_state(&mut self, state: T) {
+        self.state = state
+    }
+
     pub fn changed(&self, state: &T) -> bool {
         self.state != *state
     }
 
     pub fn note_change(&mut self, state: &T) -> bool {
         if self.changed(state) {
-            self.state = state.clone();
+            self.set_state(state.clone());
             true
         }
         else { false }
     }
 }
-
 
 
 #[derive(Debug)]

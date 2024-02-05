@@ -36,7 +36,8 @@ async fn run() {
   );
 
 
-  ctx.run(FrameCtx::new(), event_loop, window, move |_frame_ctx, GxCtx {gx, target}, event| {
+  event_loop.run(FrameCtx::new().run(window, ctx.run(move |_frame_ctx, GxCtx {gx, target}, event| {
+
     match event {
 
       WindowEvent::RedrawRequested => {
@@ -52,7 +53,8 @@ async fn run() {
 
       _ => {},
     }
-  });
+
+  }))).unwrap();
 
 }
 
