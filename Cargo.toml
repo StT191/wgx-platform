@@ -1,6 +1,6 @@
 [package]
 name = "platform"
-version = "0.2.5"
+version = "0.2.6"
 authors = ["Stefan Tammer <st.tammer@gmail.com>"]
 edition = "2021"
 
@@ -13,7 +13,8 @@ timer = []
 wake_lock = ["dep:nosleep", "web-sys/Navigator", "web-sys/WakeLock", "web-sys/WakeLockType", "web-sys/WakeLockSentinel"]
 wgx = ["dep:wgx"]
 icon_loader = ["dep:icon-loader", "dep:resvg"]
-egui = ["wgx", "dep:egui", "dep:egui-wgpu", "dep:egui-winit"]
+epaint = ["wgx", "dep:epaint", "dep:egui-wgpu"]
+egui = ["epaint", "dep:egui", "dep:egui-winit", "dep:egui_extras"]
 
 
 [dependencies]
@@ -23,8 +24,9 @@ web-time = { version = "0" }
 wgx = { version = "0.19.0", path = "../wgx", optional = true, default-features = false }
 
 
-egui = { git = "https://github.com/emilk/egui", rev = "21253d8", optional = true }
+epaint = { git = "https://github.com/emilk/egui", rev = "21253d8", optional = true }
 egui-wgpu = { git = "https://github.com/emilk/egui", rev = "21253d8", optional = true }
+egui = { git = "https://github.com/emilk/egui", rev = "21253d8", optional = true }
 egui_extras = { git = "https://github.com/emilk/egui", rev = "21253d8", optional = true } # without features
 
 

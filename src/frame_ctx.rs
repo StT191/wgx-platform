@@ -1,7 +1,14 @@
 
 use std::sync::Arc;
-use crate::winit::{window::{Window, /*WindowId,*/}, event::{WindowEvent, StartCause}, event_loop::ControlFlow};
-use crate::{*, error::inspect};
+use crate::winit::{window::{Window, /*WindowId,*/}, event::WindowEvent};
+
+#[cfg(feature = "timer")]
+use crate::winit::{event::StartCause, event_loop::ControlFlow};
+
+#[cfg(feature = "wake_lock")]
+use crate::error::inspect;
+
+use crate::*;
 
 
 #[cfg(feature = "timer")]

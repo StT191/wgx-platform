@@ -46,13 +46,19 @@ mod wake_lock;
 pub use wake_lock::*;
 
 // egui
-#[cfg(feature = "egui")]
-mod egui_ctx;
-
-#[cfg(feature = "egui")]
+#[cfg(any(feature = "epaint", feature = "egui"))]
+#[path="."]
 pub mod egui {
-    pub use egui::*;
-    pub use egui_winit;
+
+    pub use epaint::{self, ecolor, emath};
     pub use egui_wgpu;
-    pub use crate::egui_ctx::*;
+
+    #[cfg(feature = "egui")]
+    pub use egui::*;
+
+    #[cfg(feature = "egui")]
+    pub use egui_winit;
+
+    mod egui_ctx;
+    pub use egui_ctx::*;
 }
