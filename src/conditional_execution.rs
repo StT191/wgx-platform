@@ -43,15 +43,17 @@ impl Once {
         Self { once: false }
     }
 
-    pub fn call_once(&mut self, func: impl FnOnce()) {
+    pub fn call_once(&mut self, func: impl FnOnce()) -> bool {
         if !self.once {
             self.once = true;
             func();
+            true
         }
+        else { false }
     }
 
-    pub fn call_but_once(&mut self, func: impl FnOnce()) {
-        if self.once { func() }
-        else { self.once = true }
+    pub fn call_but_once(&mut self, func: impl FnOnce()) -> bool {
+        if self.once { func(); true }
+        else { self.once = true; false }
     }
 }

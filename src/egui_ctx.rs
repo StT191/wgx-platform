@@ -1,5 +1,5 @@
 
-use crate::winit::window::Window;
+use winit::window::Window;
 use wgx::{WgxDevice, WgxDeviceQueue, RenderTarget, wgpu::{CommandEncoder, RenderPass}};
 pub use egui_wgpu::{Renderer, ScreenDescriptor};
 use epaint::{Rect, ClippedPrimitive, textures::TexturesDelta};
@@ -133,7 +133,7 @@ pub use epaint_ctx::*;
 mod egui_ctx {
 
   use super::*;
-  use crate::winit::event::WindowEvent;
+  use winit::event::WindowEvent;
   use crate::Duration;
 
   use egui::{Context, ClippedPrimitive, TexturesDelta, ViewportCommand, ViewportInfo, ViewportId};
@@ -201,7 +201,7 @@ mod egui_ctx {
 
       let viewport_output = output.viewport_output.remove(&viewport_id).unwrap();
 
-      if viewport_output.commands.len() != 0 {
+      if !viewport_output.commands.is_empty() {
         process_viewport_commands(
           &self.context,
           &mut ViewportInfo::default(),

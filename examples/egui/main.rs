@@ -21,8 +21,8 @@ async fn run() {
   let mut egs_renderer = renderer(gx, target);
   let mut egs = EguiCtx::new(&window);
 
-  // run to initialize
-  egs.run(&window, |_ctx| {});
+  // run once to initialize fonts
+  gx.with_encoder(|enc| egs.run(&window, |_ctx| {}).prepare(&mut egs_renderer, gx, enc));
 
   let add_primitives = {
 
@@ -118,7 +118,7 @@ async fn run() {
 
         // handle other commands
         for command in output.commands {
-          println!("Cmd: {:#?}", command);
+          log::warn!("Cmd: {:#?}", command);
           if command == ViewportCommand::Close {
             frame_ctx.exit = true;
           }
@@ -127,7 +127,7 @@ async fn run() {
         frame_ctx.request = Some(output.repaint_delay);
 
         /*frame_counter.add();
-        if let Some(counted) = frame_counter.count() { println!("{:?}", counted) }*/
+        if let Some(counted) = frame_counter.count() { log::warn!("{:?}", counted) }*/
 
       },
 

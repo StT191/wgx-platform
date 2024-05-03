@@ -28,10 +28,10 @@ wgx = { version = "0.19.0", path = "../wgx", default-features = false, optional 
 getrandom = { version = "0.2", features = ["js"], optional = true }
 fastrand = { version = "2", default-features = false, optional = true }
 
-epaint = { version = "0.26", optional = true }
-egui-wgpu = { version = "0.26", optional = true }
-egui = { version = "0.26", optional = true }
-egui_extras = { version = "0.26", optional = true } # without features
+epaint = { version = "0.27", optional = true }
+egui-wgpu = { version = "0.27", optional = true }
+egui = { version = "0.27", optional = true }
+egui_extras = { version = "0.27", optional = true } # without features
 
 
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -42,7 +42,7 @@ resvg = { version = "^0.36", optional = true }
 pollster = "0.3"
 simple_logger = "4"
 nosleep = { version = "0.2", optional = true }
-egui-winit = { version = "0.26", optional = true }
+egui-winit = { version = "0.27", optional = true }
 
 
 [target.'cfg(target_family = "wasm")'.dependencies]
@@ -52,15 +52,16 @@ web-sys = { version = "0.3" }
 js-sys = { version = "0.3" }
 console_error_panic_hook = "0.1"
 console_log = "1"
-egui-winit = { version = "0.26", default-features = false, features = ["links"], optional = true }
+egui-winit = { version = "0.27", default-features = false, features = ["links"], optional = true }
 
 
 [dev-dependencies]
 wgx = { path = "../wgx", features = ["default"] }
 
-# egui_extras = { version = "0.26", features = ["image"] } # with features
+# egui_extras = { version = "0.27", features = ["image"] } # with features
 # image = { version = "0.24", default-features = false, features = ["png"] }
 
 
 [target.'cfg(target_family = "wasm")'.dev-dependencies]
-wgpu = { version = "*", default-features = false, features = ["webgpu", "webgl"] }
+# wgpu = { version = "0.19", default-features = false, features = ["webgpu", "webgl"] }
+wgpu = { version = "0.19", default-features = false, features = ["webgl"] }
