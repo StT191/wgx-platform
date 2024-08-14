@@ -1,6 +1,6 @@
 [package]
 name = "platform"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Stefan Tammer <st.tammer@gmail.com>"]
 edition = "2021"
 
@@ -13,6 +13,7 @@ frame_timer = []
 auto_wake_lock = ["wake_lock"]
 wake_lock = ["dep:nosleep", "web-sys/Navigator", "web-sys/WakeLock", "web-sys/WakeLockType", "web-sys/WakeLockSentinel"]
 wgx = ["dep:wgx"]
+rng = ["dep:getrandom", "dep:fastrand"]
 icon_loader = ["dep:icon-loader", "dep:resvg"]
 epaint = ["wgx", "dep:epaint", "dep:egui-wgpu"]
 egui = ["epaint", "dep:egui", "dep:egui-winit", "dep:egui_extras"]
@@ -22,8 +23,10 @@ egui = ["epaint", "dep:egui", "dep:egui-winit", "dep:egui_extras"]
 winit = "0.29"
 log = "0"
 web-time = { version = "0" }
-wgx = { version = "0.19.0", path = "../wgx", optional = true, default-features = false }
+wgx = { version = "0.19.0", path = "../wgx", default-features = false, optional = true }
 
+getrandom = { version = "0.2", features = ["js"], optional = true }
+fastrand = { version = "2", default-features = false, optional = true }
 
 epaint = { version = "0.26", optional = true }
 egui-wgpu = { version = "0.26", optional = true }

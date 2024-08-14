@@ -25,6 +25,10 @@ pub mod error;
 mod future;
 pub use future::*;
 
+// rng
+#[cfg(feature = "rng")]
+pub mod rng;
+
 // wgx
 #[cfg(feature = "wgx")]
 pub use wgx;
