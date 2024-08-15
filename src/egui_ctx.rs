@@ -132,6 +132,8 @@ pub use epaint_ctx::*;
 #[cfg(feature = "egui")]
 mod egui_ctx {
 
+  use epaint::ahash::HashSet;
+
   use super::*;
   use winit::event::WindowEvent;
   use crate::time::Duration;
@@ -188,12 +190,8 @@ mod egui_ctx {
 
       let viewport_id = input.viewport_id;
 
-      // update viewport info for context input
-      let is_focused = {
-        let viewport_info = input.viewports.get_mut(&viewport_id).unwrap();
-        update_viewport_info(viewport_info, &self.context, &window);
-        viewport_info.focused.unwrap_or(false)
-      };
+      let viewport_info = input.viewports.get_mut(&viewport_id).unwrap();
+      update_viewport_info(viewport_info, &self.context, &window, false);
 
       let mut output = self.context.run(input, ui_fn);
 
@@ -207,8 +205,7 @@ mod egui_ctx {
           &mut ViewportInfo::default(),
           viewport_output.commands.iter().cloned(),
           window,
-          is_focused,
-          &mut false,
+          &mut HashSet::default(),
         );
       }
 
