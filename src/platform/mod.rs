@@ -5,6 +5,7 @@ use winit::event_loop::{
     EventLoop as WinitEventLoop,
     EventLoopProxy as WinitEventLoopProxy,
     EventLoopWindowTarget as WinitEventLoopWindowTarget,
+    EventLoopClosed as WinitEventLoopClosed,
 };
 use winit::event::Event as WinitEventType;
 use winit::window::WindowId;
@@ -13,14 +14,19 @@ use winit::window::WindowId;
 #[derive(Debug, Clone, PartialEq)]
 pub enum PlatformEventExt {
     AppInit { window_id: WindowId },
-    #[cfg(target_family="wasm")] ClipboardPaste { window_id: WindowId },
-    #[cfg(target_family="wasm")] ClipboardFetch { window_id: WindowId },
+
+    #[cfg(all(feature = "web_clipboard", target_family="wasm"))]
+    ClipboardFetch { window_id: WindowId },
+
+    #[cfg(all(feature = "web_clipboard", target_family="wasm"))]
+    ClipboardPaste { window_id: WindowId },
 }
 
 pub type PlatformEventLoop = WinitEventLoop<PlatformEventExt>;
 pub type PlatformEventLoopProxy = WinitEventLoopProxy<PlatformEventExt>;
 pub type PlatformEventLoopWindowTarget = WinitEventLoopWindowTarget<PlatformEventExt>;
 pub type PlatformEvent = WinitEventType<PlatformEventExt>;
+pub type PlatformEventLoopClosed = WinitEventLoopClosed<PlatformEventExt>;
 
 
 // submods

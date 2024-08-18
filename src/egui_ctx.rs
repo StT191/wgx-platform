@@ -136,7 +136,10 @@ mod egui_ctx {
 
   use super::*;
   use winit::event::WindowEvent;
-  use crate::time::Duration;
+  use crate::{time::Duration, AppCtx, AppEvent};
+
+  #[cfg(all(feature = "web_clipboard", target_family="wasm"))]
+  use crate::web_clipboard::WebClipboard;
 
   use egui::{Context, ClippedPrimitive, TexturesDelta, ViewportCommand, ViewportInfo, ViewportId};
   use egui_winit::{State, update_viewport_info, process_viewport_commands};
@@ -146,6 +149,9 @@ mod egui_ctx {
     pub context: Context,
     pub state: State,
     pub screen_dsc: ScreenDescriptor,
+
+    #[cfg(all(feature = "web_clipboard", target_family="wasm"))]
+    pub web_clipboard: WebClipboard,
   }
 
   pub struct FrameOutput {
@@ -159,43 +165,89 @@ mod egui_ctx {
 
   impl EguiCtx {
 
-    pub fn new(window: &Window) -> Self {
+    pub fn new(app_ctx: &AppCtx) -> Self {
       let context = Context::default();
       // install image loaders, need to be added via features in egui_extras
       egui_extras::install_image_loaders(&context);
-      Self {
-        state: State::new(context.clone(), ViewportId::ROOT, window, None, None),
-        screen_dsc: ScreenDescriptor::from_window(window),
-        context,
+
+      #[allow(unused_mut)]
+      let mut state = State::new(context.clone(), ViewportId::ROOT, app_ctx.window(), None, None);
+      let screen_dsc = ScreenDescriptor::from_window(app_ctx.window());
+
+      #[cfg(not(all(feature = "web_clipboard", target_family="wasm")))] {
+        Self { state, screen_dsc, context }
+      }
+
+      #[cfg(all(feature = "web_clipboard", target_family="wasm"))] {
+
+        state.set_clipboard_text("DUMMY_CONTENT".to_string());
+
+        let web_clipboard = WebClipboard::connect(app_ctx, true);
+        log::warn!("{web_clipboard:?}");
+
+        Self { state, screen_dsc, context, web_clipboard }
       }
     }
 
-    pub fn event(&mut self, window: &Window, event: &WindowEvent) -> (bool, bool) {
+    pub fn event(&mut self, app_ctx: &AppCtx, app_event: &AppEvent) -> (bool, bool) {
+      match app_event {
 
-      if matches!(event, WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged {..}) {
-        self.screen_dsc = ScreenDescriptor::from_window(window);
-      }
+        AppEvent::WindowEvent(window_event) => {
 
-      if *event != WindowEvent::RedrawRequested {
-        let res = self.state.on_window_event(window, event);
-        (res.repaint, res.consumed)
-      } else {
-        (false, false)
+          if matches!(window_event, WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged {..}) {
+            self.screen_dsc = ScreenDescriptor::from_window(app_ctx.window());
+          }
+
+          if *window_event != WindowEvent::RedrawRequested {
+            let res = self.state.on_window_event(app_ctx.window(), window_event);
+
+            #[cfg(all(feature = "web_clipboard", target_family="wasm"))] {
+              let events = &mut self.state.egui_input_mut().events;
+
+              if let Some(egui::Event::Paste(_)) = events.last() {
+                // self.web_clipboard.fetch(); // disabled: listening to web-canvas paste event instead
+                events.pop();
+                return (false, false)
+              }
+            }
+
+            return (res.repaint, res.consumed)
+          }
+
+          (false, false)
+        },
+
+        #[cfg(all(feature = "web_clipboard", target_family="wasm"))]
+        AppEvent::ClipboardPaste => {
+          if let Some(text) = self.web_clipboard.read() {
+            self.state.egui_input_mut().events.push(egui::Event::Paste(text));
+            (true, true)
+          }
+          else {(false, false)}
+        },
+
+        _ => (false, false),
       }
     }
 
-    pub fn run(&mut self, window: &Window, ui_fn: impl FnOnce(&Context)) -> FrameOutput {
+    pub fn run(&mut self, app_ctx: &AppCtx, ui_fn: impl FnOnce(&Context)) -> FrameOutput {
 
-      let mut input = self.state.take_egui_input(window);
+      let mut input = self.state.take_egui_input(app_ctx.window());
 
       let viewport_id = input.viewport_id;
 
       let viewport_info = input.viewports.get_mut(&viewport_id).unwrap();
-      update_viewport_info(viewport_info, &self.context, &window, false);
+      update_viewport_info(viewport_info, &self.context, app_ctx.window(), false);
 
       let mut output = self.context.run(input, ui_fn);
 
-      self.state.handle_platform_output(window, output.platform_output);
+      #[cfg(all(feature = "web_clipboard", target_family="wasm"))]
+      if !output.platform_output.copied_text.is_empty() {
+        let copied = std::mem::replace(&mut output.platform_output.copied_text, String::new());
+        self.web_clipboard.write(copied);
+      }
+
+      self.state.handle_platform_output(app_ctx.window(), output.platform_output);
 
       let viewport_output = output.viewport_output.remove(&viewport_id).unwrap();
 
@@ -204,7 +256,7 @@ mod egui_ctx {
           &self.context,
           &mut ViewportInfo::default(),
           viewport_output.commands.iter().cloned(),
-          window,
+          app_ctx.window(),
           &mut HashSet::default(),
         );
       }

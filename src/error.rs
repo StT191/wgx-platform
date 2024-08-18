@@ -19,6 +19,11 @@ impl<T, E: ToString> ConvertResult<T, E> for Result<T, E> {
     fn convert(self) -> Res<T> { self.map_err(error) }
 }
 
+// log helper
+use std::fmt::{Display, Debug};
 
-pub fn inspect(err: impl std::fmt::Display) { log::warn!("{err}") }
+pub fn log_warn(err: impl Display) { log::warn!("{err}") }
+pub fn log_err(err: impl Display) { log::error!("{err}") }
 
+pub fn log_warn_debug(err: impl Debug) { log::warn!("{err:?}") }
+pub fn log_err_debug(err: impl Debug) { log::error!("{err:?}") }

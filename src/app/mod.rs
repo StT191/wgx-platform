@@ -13,6 +13,11 @@ use state::*;
 pub use mount::*;
 
 
+#[cfg(all(feature = "web_clipboard", target_family="wasm"))]
+#[cfg(web_sys_unstable_apis)]
+pub mod web_clipboard;
+
+
 // exports
 #[cfg(feature = "frame_timer")]
 use crate::time::Duration;
@@ -26,6 +31,8 @@ pub enum AppEvent {
   Resumed,
   Suspended,
   WindowEvent(WindowEvent),
+  #[cfg(all(feature = "web_clipboard", target_family="wasm"))] ClipboardFetch,
+  #[cfg(all(feature = "web_clipboard", target_family="wasm"))] ClipboardPaste,
 }
 
 
