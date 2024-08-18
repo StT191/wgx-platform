@@ -6,7 +6,7 @@ use ::platform::winit::{
 };
 use wgx::{*, /*cgmath::**/};
 
-use platform::{*, time::*, error::inspect};
+use platform::{*, time::*, error::*};
 
 main_app_closure! {
   LogLevel::Warn,
@@ -16,7 +16,7 @@ main_app_closure! {
 
 async fn init_app(ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
 
-  let window = ctx.window.clone();
+  let window = ctx.window_clone();
 
   let (gx, mut target) = wgx_ctx::init(window.clone(), (features!(), limits!(), 4, false)).await;
 
@@ -66,9 +66,9 @@ async fn init_app(ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
           rpass.draw(0..3, 0..1);
         });
 
-      })).unwrap_or_else(inspect);
+      })).unwrap_or_else(log_warn);
 
-      log::warn!("{:?}", then.elapsed());
+      log_warn_debug(then.elapsed());
     }
 
     _ => {},

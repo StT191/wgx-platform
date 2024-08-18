@@ -10,7 +10,7 @@ use crate::time::*;
 use winit::event::StartCause;
 
 #[cfg(feature = "auto_wake_lock")]
-use crate::{error::inspect, wake_lock::WakeLock};
+use crate::{error::log_warn, wake_lock::WakeLock};
 
 use super::{AppEvent, AppCtx, AppHandler};
 
@@ -30,12 +30,12 @@ impl<App: AppHandler> AppState<App> {
 
   pub(super) fn new(app_ctx: AppCtx, app: App) -> Self {
     Self {
-      #[cfg(feature = "auto_wake_lock")] wake_lock: WakeLock::new().inspect_err(|err| inspect(err)).ok(),
+      #[cfg(feature = "auto_wake_lock")] wake_lock: WakeLock::new().inspect_err(|err| log_warn(err)).ok(),
       #[cfg(feature = "frame_timer")] animate: DetectChanges::new(!app_ctx.animate),
       #[cfg(feature = "frame_timer")] requested: DetectChanges::new(None),
       #[cfg(feature = "frame_timer")] last: Instant::now(),
       #[cfg(feature = "frame_timer")] next: Instant::now() + app_ctx.duration,
-      window_id: app_ctx.window.id(),
+      window_id: app_ctx.window().id(),
       app_ctx, app,
     }
   }
@@ -48,7 +48,7 @@ impl<App: AppHandler> AppState<App> {
 
       #[cfg(feature = "frame_timer")]
       PlatformEvent::NewEvents(StartCause::ResumeTimeReached {..}) => {
-        app_ctx.window.request_redraw();
+        app_ctx.window().request_redraw();
       },
 
       PlatformEvent::Resumed => {
@@ -59,6 +59,19 @@ impl<App: AppHandler> AppState<App> {
       PlatformEvent::Suspended => {
         self.app.event(app_ctx, &AppEvent::Suspended);
         self.after_event(event_target, None);
+      },
+
+      #[cfg(all(feature = "web_clipboard", target_family="wasm"))]
+      PlatformEvent::UserEvent(user_event) => match user_event {
+        PlatformEventExt::ClipboardFetch { window_id: id } if id == self.window_id => {
+          self.app.event(app_ctx, &AppEvent::ClipboardFetch);
+          self.after_event(event_target, None);
+        },
+        PlatformEventExt::ClipboardPaste { window_id: id } if id == self.window_id  => {
+          self.app.event(app_ctx, &AppEvent::ClipboardPaste);
+          self.after_event(event_target, None);
+        },
+        _ => {},
       },
 
       PlatformEvent::WindowEvent { window_id: id, event: window_event } if id == self.window_id => {
@@ -94,7 +107,7 @@ impl<App: AppHandler> AppState<App> {
           },
 
           WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged {..} => {
-            app_ctx.window.request_redraw();
+            app_ctx.window().request_redraw();
           },
 
           #[cfg(feature = "auto_wake_lock")]
@@ -131,11 +144,11 @@ impl<App: AppHandler> AppState<App> {
     if let Some(focus) = focus_change {
       if !focus {
         // release wake_lock
-        self.wake_lock.as_mut().map(|lock| lock.release().unwrap_or_else(inspect));
+        self.wake_lock.as_mut().map(|lock| lock.release().unwrap_or_else(log_warn));
       }
       else if app_ctx.auto_wake_lock {
         // request wake_lock
-        self.wake_lock.as_mut().map(|lock| lock.request().unwrap_or_else(inspect));
+        self.wake_lock.as_mut().map(|lock| lock.request().unwrap_or_else(log_warn));
       }
     }
 
@@ -156,14 +169,14 @@ impl<App: AppHandler> AppState<App> {
           #[cfg(feature = "auto_wake_lock")]
           if app_ctx.auto_wake_lock {
             // request wake_lock
-            self.wake_lock.as_mut().map(|lock| lock.request().unwrap_or_else(inspect));
+            self.wake_lock.as_mut().map(|lock| lock.request().unwrap_or_else(log_warn));
           }
 
           let now = Instant::now();
 
           if self.next <= now {
             self.next = now; // reset frame_timer
-            app_ctx.window.request_redraw();
+            app_ctx.window().request_redraw();
           }
           else {
             event_target.set_earlier(self.next);
@@ -172,7 +185,7 @@ impl<App: AppHandler> AppState<App> {
         else {
           #[cfg(feature = "auto_wake_lock")]
           // release wake_lock
-          self.wake_lock.as_mut().map(|lock| lock.release().unwrap_or_else(inspect));
+          self.wake_lock.as_mut().map(|lock| lock.release().unwrap_or_else(log_warn));
 
           event_target.set_wait();
         }

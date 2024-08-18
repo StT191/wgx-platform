@@ -1,6 +1,6 @@
 [package]
 name = "platform"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["Stefan Tammer <st.tammer@gmail.com>"]
 edition = "2021"
 
@@ -21,6 +21,7 @@ rng = ["dep:getrandom", "dep:fastrand"]
 icon_loader = ["dep:icon-loader", "dep:resvg"]
 epaint = ["wgx", "dep:epaint", "dep:egui-wgpu"]
 egui = ["epaint", "dep:egui", "dep:egui-winit", "dep:egui_extras"]
+web_clipboard = ["web-sys/Clipboard", "web-sys/ClipboardEvent", "web-sys/DataTransfer"]
 
 
 [dependencies]
