@@ -77,11 +77,11 @@ pub fn new() -> impl FnMut(&Context) -> () {
       // ui.image(include_image!("../../../wgx/examples/common/img/logo_red.png"));
 
 
-      let painter = ui.painter();
+      /*let painter = ui.painter();
 
       painter.circle_filled([100.0, 100.0].into(), 50.0, Color32::from_rgb(0xFF, 0x00, 0x00));
 
-      painter.hline(40.0..=600.0, 30.0, Stroke::from((10.0, Color32::from_rgb(0xFF, 0x00, 0x00))));
+      painter.hline(40.0..=600.0, 30.0, Stroke::from((10.0, Color32::from_rgb(0xFF, 0x00, 0x00))));*/
 
 
       if show_settings {

@@ -1,5 +1,5 @@
 
-use crate::{Instant, Duration};
+use crate::time::{Instant, Duration};
 
 
 #[derive(Debug, Clone)]

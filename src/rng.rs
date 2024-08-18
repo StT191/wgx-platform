@@ -24,7 +24,7 @@ pub fn entropy() -> u64 {
 
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
-    use crate::Instant;
+    use crate::time::Instant;
 
     let mut hasher = DefaultHasher::new();
     Instant::now().hash(&mut hasher);

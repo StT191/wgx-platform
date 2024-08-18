@@ -1,29 +1,23 @@
 
 // re-exports
 pub use winit;
-pub use web_time::{Instant, Duration};
+pub use web_time as time;
+
+pub use log::{self, Level as LogLevel};
 
 #[cfg(not(target_family="wasm"))]
 pub use pollster;
 
-pub use log::{self, Level as LogLevel};
-
 // mods
-mod conditional_execution;
-pub use conditional_execution::*;
-
-mod entry_point;
-pub use entry_point::*;
-
-mod timer;
-pub use timer::*;
-
-pub mod frame_ctx;
+mod platform;
+pub use platform::*;
 
 pub mod error;
 
-mod future;
-pub use future::*;
+mod app;
+pub use app::*;
+
+pub mod timer;
 
 // rng
 #[cfg(feature = "rng")]
@@ -34,9 +28,7 @@ pub mod rng;
 pub use wgx;
 
 #[cfg(feature = "wgx")]
-mod gx_ctx;
-#[cfg(feature = "wgx")]
-pub use gx_ctx::*;
+pub mod wgx_ctx;
 
 // icon loader
 #[cfg(feature = "icon_loader")]
@@ -45,9 +37,7 @@ pub mod icon_loader;
 
 // wake_lock
 #[cfg(feature = "wake_lock")]
-mod wake_lock;
-#[cfg(feature = "wake_lock")]
-pub use wake_lock::*;
+pub mod wake_lock;
 
 // egui
 #[cfg(any(feature = "epaint", feature = "egui"))]
