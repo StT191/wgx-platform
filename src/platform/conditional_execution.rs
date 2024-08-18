@@ -1,5 +1,5 @@
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DetectChanges<T: PartialEq + Clone> {
     state: T,
 }

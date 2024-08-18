@@ -134,7 +134,7 @@ mod egui_ctx {
 
   use super::*;
   use winit::event::WindowEvent;
-  use crate::Duration;
+  use crate::time::Duration;
 
   use egui::{Context, ClippedPrimitive, TexturesDelta, ViewportCommand, ViewportInfo, ViewportId};
   use egui_winit::{State, update_viewport_info, process_viewport_commands};

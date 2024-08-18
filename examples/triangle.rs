@@ -1,18 +1,26 @@
 
-use platform::winit::{window::WindowBuilder, event::WindowEvent};
+use ::platform::winit::{
+  window::WindowBuilder,
+  event::{WindowEvent, KeyEvent, ElementState},
+  keyboard::{PhysicalKey, KeyCode},
+};
 use wgx::{*, /*cgmath::**/};
-use platform::{*, frame_ctx::*, error::inspect};
 
-async fn run() {
+use platform::{*, time::*, error::inspect};
 
-  let event_loop = event_loop();
-  let window = window(WindowBuilder::new(), &event_loop).await;
+main_app_closure! {
+  LogLevel::Warn,
+  WindowBuilder::new(),
+  init_app,
+}
 
-  let ctx = GxCtx::new(window.clone(), features!(), limits!(), 4, false).await;
-  let GxCtx {gx, target} = &ctx;
+async fn init_app(ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
+
+  let window = ctx.window.clone();
+
+  let (gx, mut target) = wgx_ctx::init(window.clone(), (features!(), limits!(), 4, false)).await;
 
   log::warn!("{:?}", gx.adapter.get_info());
-
 
   let shader = gx.load_wgsl(wgsl_modules::inline!("$shader" <= {
     @vertex
@@ -28,37 +36,43 @@ async fn run() {
     }
   }));
 
-
-  let pipeline = target.render_pipeline(gx,
+  let pipeline = target.render_pipeline(&gx,
     None, &[],
     (&shader, "vs_main", Primitive::default()),
     (&shader, "fs_main", None),
   );
 
 
-  event_loop.run(FrameCtx::new().run(window, ctx.run(move |_frame_ctx, GxCtx {gx, target}, event| {
+  move |_ctx: &mut AppCtx, event: &AppEvent| match event {
 
-    match event {
+    AppEvent::WindowEvent(WindowEvent::Resized(size)) => {
+      target.update(&gx, (size.width as u32, size.height as u32));
+    },
 
-      WindowEvent::RedrawRequested => {
-        target.with_frame(None, |frame| gx.with_encoder(|encoder| {
+    AppEvent::WindowEvent(WindowEvent::KeyboardInput { event: KeyEvent {
+      state: ElementState::Pressed, physical_key: PhysicalKey::Code(KeyCode::KeyR), ..
+    }, ..}) => {
+      window.request_redraw();
+    },
 
-          encoder.with_render_pass(frame.attachments(Some(Color::BLACK), None), |rpass| {
-            rpass.set_pipeline(&pipeline);
-            rpass.draw(0..3, 0..1);
-          });
+    AppEvent::WindowEvent(WindowEvent::RedrawRequested) => {
 
-        })).unwrap_or_else(inspect);
-      }
+      let then = Instant::now();
 
-      _ => {},
+      target.with_frame(None, |frame| gx.with_encoder(|encoder| {
+
+        encoder.with_render_pass(frame.attachments(Some(Color::BLACK), None), |rpass| {
+          rpass.set_pipeline(&pipeline);
+          rpass.draw(0..3, 0..1);
+        });
+
+      })).unwrap_or_else(inspect);
+
+      log::warn!("{:?}", then.elapsed());
     }
 
-  }))).unwrap();
+    _ => {},
 
-}
+  }
 
-fn main() {
-  init(LogLevel::Warn);
-  spawn_local(run());
 }

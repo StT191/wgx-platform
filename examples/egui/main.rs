@@ -1,28 +1,32 @@
 
-use platform::winit::{window::{WindowBuilder}, event::*};
-use platform::{*, frame_ctx::*, egui::*};
+use platform::winit::{window::{WindowBuilder}, event::{WindowEvent}};
+use platform::{*, time::*, egui::*};
 use wgx::{*};
 
 
 mod ui;
 
-async fn run() {
 
-  let event_loop = event_loop();
-  let window = window(WindowBuilder::new().with_title("WgFx"), &event_loop).await;
+main_app_closure! {
+  LogLevel::Warn,
+  WindowBuilder::new().with_title("WgFx"),
+  init_app,
+}
 
-  let ctx = GxCtx::new(window.clone(), features!(), limits!(), 1, false).await;
-  let GxCtx {gx, target} = &ctx;
+async fn init_app(app_ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
 
+  let window = app_ctx.window.clone();
+
+  let (gx, mut target) = wgx_ctx::init(window.clone(), (features!(), limits!(), 1, false)).await;
 
   // egui setup
 
   let mut ui = ui::new();
-  let mut egs_renderer = renderer(gx, target);
+  let mut egs_renderer = renderer(&gx, &target);
   let mut egs = EguiCtx::new(&window);
 
   // run once to initialize fonts
-  gx.with_encoder(|enc| egs.run(&window, |_ctx| {}).prepare(&mut egs_renderer, gx, enc));
+  gx.with_encoder(|enc| egs.run(&window, |_ctx| {}).prepare(&mut egs_renderer, &gx, enc));
 
   let add_primitives = {
 
@@ -46,7 +50,7 @@ async fn run() {
 
   // epainting ...
 
-  let mut ept_renderer = renderer(gx, target);
+  let mut ept_renderer = renderer(&gx, &target);
   let mut ept = EpaintCtx::new(ScreenDescriptor::from_window(&window), 2048, FontDefinitions::default());
 
   let mut primitives = Vec::new();
@@ -63,81 +67,81 @@ async fn run() {
     ),
   ];
 
-
   // let mut frame_counter = IntervalCounter::from_secs(3.0);
 
-  event_loop.run(FrameCtx::new().run(window.clone(), ctx.run(move |frame_ctx, GxCtx {gx, target}, event| {
+  move |app_ctx: &mut AppCtx, app_event: &AppEvent| match app_event {
 
-    let (repaint, _) = egs.event(&window, &event);
+    AppEvent::WindowEvent(event) => {
 
-    if repaint {
-      frame_ctx.request = Some(Duration::ZERO); // as early as possible
-    }
+      let (repaint, _) = egs.event(&window, &event);
 
-    match event {
+      if repaint {
+        app_ctx.request = Some(Duration::ZERO); // as early as possible
+      }
 
-      WindowEvent::Resized(_) => {
+      match event {
 
-        // redraw epait ...
-        ept.screen_dsc = ScreenDescriptor::from_window(&window);
+        WindowEvent::Resized(size) => {
 
-        primitives.clear();
+          target.update(&gx, (size.width, size.height));
 
-        ept.tessellate(
-          Default::default(),
-          ept.clip_shapes(shapes.iter().cloned(), None),
-          &mut primitives
-        );
+          // redraw epait ...
+          ept.screen_dsc = ScreenDescriptor::from_window(&window);
 
-        gx.with_encoder(|encoder| {
-          ept.prepare(&mut ept_renderer, gx, encoder, &primitives);
-        });
-      },
+          primitives.clear();
 
-      WindowEvent::RedrawRequested => {
+          ept.tessellate(
+            Default::default(),
+            ept.clip_shapes(shapes.iter().cloned(), None),
+            &mut primitives
+          );
 
-        // gui handling
-        let mut output = egs.run(&window, &mut ui);
-
-        output.clipped_primitives.extend_from_slice(&add_primitives);
-
-        // draw
-        target.with_frame(None, |frame| gx.with_encoder(|encoder| {
-
-          output.prepare(&mut egs_renderer, gx, encoder);
-
-          encoder.with_render_pass(frame.attachments(Some(Color::WHITE.into()), None), |mut rpass| {
-
-            output.render(&egs_renderer, &mut rpass);
-
-            ept.render(&ept_renderer, &mut rpass, &primitives);
-
+          gx.with_encoder(|encoder| {
+            ept.prepare(&mut ept_renderer, &gx, encoder, &primitives);
           });
+        },
 
-        })).expect("frame error");
+        WindowEvent::RedrawRequested => {
 
-        // handle other commands
-        for command in output.commands {
-          log::warn!("Cmd: {:#?}", command);
-          if command == ViewportCommand::Close {
-            frame_ctx.exit = true;
+          // gui handling
+          let mut output = egs.run(&window, &mut ui);
+
+          output.clipped_primitives.extend_from_slice(&add_primitives);
+
+          // draw
+          target.with_frame(None, |frame| gx.with_encoder(|encoder| {
+
+            output.prepare(&mut egs_renderer, &gx, encoder);
+
+            encoder.with_render_pass(frame.attachments(Some(Color::WHITE.into()), None), |mut rpass| {
+
+              output.render(&egs_renderer, &mut rpass);
+
+              ept.render(&ept_renderer, &mut rpass, &primitives);
+
+            });
+
+          })).expect("frame error");
+
+          // handle other commands
+          for command in output.commands {
+            log::warn!("Cmd: {:#?}", command);
+            if command == ViewportCommand::Close {
+              app_ctx.exit = true;
+            }
           }
-        }
 
-        frame_ctx.request = Some(output.repaint_delay);
+          app_ctx.request = Some(output.repaint_delay);
 
-        /*frame_counter.add();
-        if let Some(counted) = frame_counter.count() { log::warn!("{:?}", counted) }*/
+          /*frame_counter.add();
+          if let Some(counted) = frame_counter.count() { log::warn!("{:?}", counted) }*/
 
-      },
+        },
 
-      _ => (),
+        _ => (),
+      }
     }
 
-  }))).unwrap();
-}
-
-fn main() {
-  init(LogLevel::Warn);
-  spawn_local(run());
+    _ => (),
+  }
 }
