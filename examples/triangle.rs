@@ -46,7 +46,7 @@ async fn init_app(ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
   move |_ctx: &mut AppCtx, event: &AppEvent| match event {
 
     AppEvent::WindowEvent(WindowEvent::Resized(size)) => {
-      target.update(&gx, (size.width as u32, size.height as u32));
+      target.update(&gx, [size.width, size.height]);
     },
 
     AppEvent::WindowEvent(WindowEvent::KeyboardInput { event: KeyEvent {

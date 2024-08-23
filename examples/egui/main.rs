@@ -81,7 +81,7 @@ async fn init_app(app_ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
 
       WindowEvent::Resized(size) => {
 
-        target.update(&gx, (size.width, size.height));
+        target.update(&gx, [size.width, size.height]);
 
         // redraw epait ...
         ept.screen_dsc = ScreenDescriptor::from_window(&window);
