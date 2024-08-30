@@ -18,7 +18,7 @@ async fn init_app(ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
 
   let window = ctx.window_clone();
 
-  let (gx, mut target) = wgx_ctx::init(window.clone(), (features!(), limits!(), 4, false)).await;
+  let (gx, mut target) = wgx_ctx::init(window.clone(), (features!(), limits!(), 4, None)).await;
 
   log::warn!("{:?}", gx.adapter.get_info());
 
@@ -61,7 +61,7 @@ async fn init_app(ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
 
       target.with_frame(None, |frame| gx.with_encoder(|encoder| {
 
-        encoder.with_render_pass(frame.attachments(Some(Color::BLACK), None), |rpass| {
+        encoder.with_render_pass(frame.attachments(Some(Color::BLACK), None, None), |rpass| {
           rpass.set_pipeline(&pipeline);
           rpass.draw(0..3, 0..1);
         });

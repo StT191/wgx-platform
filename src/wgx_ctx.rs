@@ -1,10 +1,10 @@
 
 use std::sync::Arc;
 use winit::window::Window;
-use wgx::{Wgx, SurfaceTarget, Limits, Features};
+use wgx::{Wgx, SurfaceTarget, Limits, Features, TextureFormat};
 
 pub type WgxCtx = (Wgx, SurfaceTarget);
-pub type InitData = (Features, Limits, u32, bool);
+pub type InitData = (Features, Limits, u32, Option<TextureFormat>);
 
 pub async fn init(window: Arc<Window>, (features, limits, msaa, depth_testing): InitData) -> WgxCtx {
   let size = window.inner_size();

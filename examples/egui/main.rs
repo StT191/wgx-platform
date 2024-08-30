@@ -17,7 +17,7 @@ async fn init_app(app_ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
 
   let window = app_ctx.window_clone();
 
-  let (gx, mut target) = wgx_ctx::init(window.clone(), (features!(), limits!(), 1, false)).await;
+  let (gx, mut target) = wgx_ctx::init(window.clone(), (features!(), limits!(), 1, None)).await;
 
   // egui setup
 
@@ -111,7 +111,7 @@ async fn init_app(app_ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
 
           output.prepare(&mut egs_renderer, &gx, encoder);
 
-          encoder.with_render_pass(frame.attachments(Some(Color::WHITE.into()), None), |mut rpass| {
+          encoder.with_render_pass(frame.attachments(Some(Color::WHITE.into()), None, None), |mut rpass| {
 
             output.render(&egs_renderer, &mut rpass);
 

@@ -1,6 +1,6 @@
 [package]
 name = "platform"
-version = "0.4.3"
+version = "0.4.4"
 authors = ["Stefan Tammer <st.tammer@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -11,6 +11,10 @@ name = "platform"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(web_sys_unstable_apis)'] }
+
+
+# [patch."https://github.com/StT191/wgx"]
+# wgx = { path = "../wgx" }
 
 
 [features]
@@ -30,7 +34,7 @@ winit = "0.29"
 log = "0"
 web-time = { version = "0" }
 take_mut = "0.2"
-wgx = { version = "0.20.1", tag = "v0.20.1", git = "https://github.com/StT191/wgx", default-features = false, optional = true }
+wgx = { version = "0.20.2", tag = "v0.20.2", git = "https://github.com/StT191/wgx", default-features = false, optional = true }
 
 getrandom = { version = "0.2", features = ["js"], optional = true }
 fastrand = { version = "2", default-features = false, optional = true }
@@ -63,7 +67,7 @@ egui-winit = { version = "0.28", default-features = false, features = ["links"],
 
 
 [dev-dependencies]
-wgx = { tag = "v0.20.1", git = "https://github.com/StT191/wgx", features = ["default"] }
+wgx = { tag = "v0.20.2", git = "https://github.com/StT191/wgx", features = ["default"] }
 
 # egui_extras = { version = "0.28", features = ["image"] } # with features
 # image = { version = "0.24", default-features = false, features = ["png"] }
