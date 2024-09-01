@@ -17,7 +17,7 @@ async fn init_app(app_ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
 
   let window = app_ctx.window_clone();
 
-  let (gx, mut target) = wgx_ctx::init(window.clone(), (features!(), limits!(), 1, None)).await;
+  let (gx, mut target) = Wgx::new_with_target(window.clone(), features!(), limits!(), window.inner_size(), 1, None).await.unwrap();
 
   // egui setup
 
@@ -81,7 +81,7 @@ async fn init_app(app_ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
 
       WindowEvent::Resized(size) => {
 
-        target.update(&gx, [size.width, size.height]);
+        target.update(&gx, *size);
 
         // redraw epait ...
         ept.screen_dsc = ScreenDescriptor::from_window(&window);

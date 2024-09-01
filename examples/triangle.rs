@@ -18,7 +18,7 @@ async fn init_app(ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
 
   let window = ctx.window_clone();
 
-  let (gx, mut target) = wgx_ctx::init(window.clone(), (features!(), limits!(), 4, None)).await;
+  let (gx, mut target) = Wgx::new_with_target(window.clone(), features!(), limits!(), window.inner_size(), 4, None).await.unwrap();
 
   log::warn!("{:?}", gx.adapter.get_info());
 
@@ -46,7 +46,7 @@ async fn init_app(ctx: &mut AppCtx) -> impl FnMut(&mut AppCtx, &AppEvent) {
   move |_ctx: &mut AppCtx, event: &AppEvent| match event {
 
     AppEvent::WindowEvent(WindowEvent::Resized(size)) => {
-      target.update(&gx, [size.width, size.height]);
+      target.update(&gx, *size);
     },
 
     AppEvent::WindowEvent(WindowEvent::KeyboardInput { event: KeyEvent {

@@ -27,9 +27,6 @@ pub mod rng;
 #[cfg(feature = "wgx")]
 pub use wgx;
 
-#[cfg(feature = "wgx")]
-pub mod wgx_ctx;
-
 // icon loader
 #[cfg(feature = "icon_loader")]
 #[cfg(target_os = "linux")]
