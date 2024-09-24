@@ -32,16 +32,14 @@ impl<T: PartialEq + Clone> DetectChanges<T> {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Once {
     once: bool
 }
 
 impl Once {
 
-    pub fn new() -> Self {
-        Self { once: false }
-    }
+    pub fn new() -> Self { Self::default() }
 
     pub fn call_once(&mut self, func: impl FnOnce()) -> bool {
         if !self.once {

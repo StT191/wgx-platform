@@ -1,6 +1,6 @@
 [package]
 name = "platform"
-version = "0.4.5"
+version = "0.4.6"
 authors = ["Stefan Tammer <st.tammer@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -34,7 +34,7 @@ winit = "0.29"
 log = "0"
 web-time = { version = "0" }
 take_mut = "0.2"
-wgx = { version = "0.20.3", tag = "v0.20.3", git = "https://github.com/StT191/wgx", default-features = false, optional = true }
+wgx = { version = "0.20.4", tag = "v0.20.4", git = "https://github.com/StT191/wgx", default-features = false, optional = true }
 
 getrandom = { version = "0.2", features = ["js"], optional = true }
 fastrand = { version = "2", default-features = false, optional = true }
@@ -67,7 +67,7 @@ egui-winit = { version = "0.28", default-features = false, features = ["links"],
 
 
 [dev-dependencies]
-wgx = { tag = "v0.20.3", git = "https://github.com/StT191/wgx", features = ["default"] }
+wgx = { tag = "v0.20.4", git = "https://github.com/StT191/wgx", features = ["default"] }
 
 # egui_extras = { version = "0.28", features = ["image"] } # with features
 # image = { version = "0.24", default-features = false, features = ["png"] }

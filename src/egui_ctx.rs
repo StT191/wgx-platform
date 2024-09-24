@@ -24,13 +24,13 @@ fn prepare_renderer(
   textures_delta: &TexturesDelta, clipped_primitives: &[ClippedPrimitive], screen_dsc: &ScreenDescriptor,
 ) {
   for (id, image_delta) in &textures_delta.set {
-    renderer.update_texture(gx.device(), gx.queue(), *id, &image_delta);
+    renderer.update_texture(gx.device(), gx.queue(), *id, image_delta);
   }
 
-  if clipped_primitives.len() != 0 {
+  if !clipped_primitives.is_empty() {
     let commands = renderer.update_buffers(gx.device(), gx.queue(), encoder, clipped_primitives, screen_dsc);
 
-    if commands.len() != 0 {
+    if !commands.is_empty() {
       gx.queue().submit(commands);
     }
   }
@@ -130,6 +130,7 @@ pub use epaint_ctx::*;
 // egui context
 
 #[cfg(feature = "egui")]
+#[allow(clippy::module_inception)]
 mod egui_ctx {
 
   use epaint::ahash::HashSet;
@@ -243,7 +244,7 @@ mod egui_ctx {
 
       #[cfg(all(feature = "web_clipboard", target_family="wasm"))]
       if !output.platform_output.copied_text.is_empty() {
-        let copied = std::mem::replace(&mut output.platform_output.copied_text, String::new());
+        let copied = std::mem::take(&mut output.platform_output.copied_text);
         self.web_clipboard.write(copied);
       }
 

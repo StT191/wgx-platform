@@ -1,7 +1,7 @@
 
 use winit::{window::WindowId, event::WindowEvent};
 
-use crate::*;
+use crate::{*, error::Res};
 
 #[cfg(feature = "frame_timer")]
 use crate::time::*;
@@ -139,16 +139,23 @@ impl<App: AppHandler> AppState<App> {
       return;
     }
 
+    #[cfg(feature = "auto_wake_lock")]
+    fn wake_lock(wake_lock: &mut Option<WakeLock>, action: impl FnOnce(&mut WakeLock) -> Res<()>) {
+      if let Some(wake_lock) = wake_lock.as_mut() {
+        action(wake_lock).unwrap_or_else(log_warn);
+      }
+    }
+
 
     #[cfg(feature = "auto_wake_lock")]
     if let Some(focus) = focus_change {
       if !focus {
         // release wake_lock
-        self.wake_lock.as_mut().map(|lock| lock.release().unwrap_or_else(log_warn));
+        wake_lock(&mut self.wake_lock, WakeLock::release);
       }
       else if app_ctx.auto_wake_lock {
         // request wake_lock
-        self.wake_lock.as_mut().map(|lock| lock.request().unwrap_or_else(log_warn));
+        wake_lock(&mut self.wake_lock, WakeLock::request);
       }
     }
 
@@ -169,7 +176,7 @@ impl<App: AppHandler> AppState<App> {
           #[cfg(feature = "auto_wake_lock")]
           if app_ctx.auto_wake_lock {
             // request wake_lock
-            self.wake_lock.as_mut().map(|lock| lock.request().unwrap_or_else(log_warn));
+            wake_lock(&mut self.wake_lock, WakeLock::request);
           }
 
           let now = Instant::now();
@@ -185,7 +192,7 @@ impl<App: AppHandler> AppState<App> {
         else {
           #[cfg(feature = "auto_wake_lock")]
           // release wake_lock
-          self.wake_lock.as_mut().map(|lock| lock.release().unwrap_or_else(log_warn));
+          wake_lock(&mut self.wake_lock, WakeLock::release);
 
           event_target.set_wait();
         }

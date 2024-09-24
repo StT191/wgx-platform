@@ -17,7 +17,7 @@ impl ClipboardHandle {
   fn new() -> Option<Self> {
     (|| {
       let clipboard = web_sys::window()
-        .and_then(|win| Some(win.navigator().clipboard()))
+        .map(|win| win.navigator().clipboard())
         .ok_or("navigator.clipboard is not available")?
       ;
 
@@ -223,10 +223,10 @@ use std::fmt;
 impl fmt::Debug for WebClipboard {
   fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
     fmt.debug_struct("WebClipboard")
-    .field(&"connected", &self.is_connected())
-    .field(&"listening", &self.is_listening())
-    .field(&"readable", &self.is_readable())
-    .field(&"writeable", &self.is_writeable())
+    .field("connected", &self.is_connected())
+    .field("listening", &self.is_listening())
+    .field("readable", &self.is_readable())
+    .field("writeable", &self.is_writeable())
     .finish()
   }
 }
